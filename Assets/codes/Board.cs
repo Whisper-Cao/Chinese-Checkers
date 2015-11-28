@@ -16,7 +16,7 @@ public class Board : MonoBehaviour {
 	//player list
 	private string[] colorList = {"PlayerOrange", "PlayerGreen", "PlayerBlue", "PlayerRed", "PlayerYellow", "PlayerPurple", "None"};
 	//6 jump directions
-	private int[][] jumpDirections = new int[6][];             
+	private int[][] jumpDirections = new int[6][];                 
 	//6 move directions
 	private int[][] moveDirections = new int[6][];
 	//numbers of hoodles already in the opposite section
