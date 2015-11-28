@@ -8,6 +8,7 @@ public class Board : MonoBehaviour {
 	private Transform BoradPos;
 	private int lightCounter; 
 	private Queue arrivableList;//board Cells that can be reached by currHoodle
+
 	private Queue lightOnList;//all the light currently on
 	private int currPlayer;
 	private GameManager gameManager;
