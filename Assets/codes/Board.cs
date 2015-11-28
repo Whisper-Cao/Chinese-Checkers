@@ -19,7 +19,7 @@ public class Board : MonoBehaviour {
 	private int[][] jumpDirections = new int[6][];                 
 	//6 move directions
 	private int[][] moveDirections = new int[6][];
-	//numbers of hoodles already in the opposite sectio
+	//numbers of hoodles already in the opposite section
 	private int[] arrivalCounters = new int[6];
 
 	//Data structure for each board cell.
