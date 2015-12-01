@@ -8,7 +8,6 @@ public class Board : MonoBehaviour {
 	private Transform BoradPos;
 	private int lightCounter; 
 	private Queue arrivableList;//board Cells that can be reached by currHoodle
-
 	private Queue lightOnList;//all the light currently on
 	private int currPlayer;
 	private GameManager gameManager;
@@ -16,15 +15,18 @@ public class Board : MonoBehaviour {
 	//player list
 	private string[] colorList = {"PlayerOrange", "PlayerGreen", "PlayerBlue", "PlayerRed", "PlayerYellow", "PlayerPurple", "None"};
 	//6 jump directions
-	private int[][] jumpDirections = new int[6][];                 
+	private int[][] jumpDirections = new int[6][];
 	//6 move directions
 	private int[][] moveDirections = new int[6][];
 	//numbers of hoodles already in the opposite section
 	private int[] arrivalCounters = new int[6];
+	//whether the game mode is initialized
+	private bool GameModeInitialized;
 
 	//Data structure for each board cell.
 	private class BoardCell {
 		public bool cellOccupied = false;
+		public int withPickUps = -1;// -1 for no pickUp, others for pickUp number
 		public Vector2 cellPos;//position of cell 
 		public FloorLightController lightManager;//light in the cell
 		public Queue bounceQueue = new Queue();//keep the trace of how the cell is reached by currHoodle
@@ -58,6 +60,7 @@ public class Board : MonoBehaviour {
 		gameManager = GameObject.FindGameObjectWithTag ("PlayBoard").GetComponent<GameManager> ();
 		playerCamera = GameObject.Find ("Main Camera").GetComponent<Camera> ();
 		BoradPos = GetComponent<Transform> ();
+		GameModeInitialized = false;
 	}
 
 	//when a hoodle is chosen, it uses this method to send request to the board for changing the currHoodle to itself
@@ -120,23 +123,27 @@ public class Board : MonoBehaviour {
 			int playerNum = translatePlayer(currHoodle.tag.ToString());
 			if(playerNum == BoardCells[row,col].occupyingPlayer) {
 				++arrivalCounters[playerNum];
-				if(arrivalCounters[playerNum] == 15)
+				if(arrivalCounters[playerNum] == 10)
 					gameManager.Win(currHoodle.tag.ToString());
 			}
 			if(playerNum == BoardCells[(int)currHoodle.GetOnBoardPos()[0], (int)currHoodle.GetOnBoardPos()[1]].occupyingPlayer)
 				--arrivalCounters[playerNum];
 			currHoodle.SetCoordinate(row, col);
-
 			//send movements according to the bounce queue
 			while(BoardCells[row, col].bounceQueue.Count > 0){
 				int[] nextPos = (int[])BoardCells[row, col].bounceQueue.Dequeue();
 				Vector2 twodPos = BoardCells[nextPos[0], nextPos[1]].cellPos;
 				currHoodle.moveQueue.Enqueue(new Vector3(twodPos.x, 0, twodPos.y));
+				//check for time mode
+				UpdateGameMode(nextPos[0], nextPos[1]);
 			}
 			turnOffAllPoss();
 			currHoodle.NotifyMove();
 			currHoodle.ResumeState();
 			currHoodle = null;
+
+			//check for time mode
+			//UpdateGameMode(row, col);
 		}
 	}
 
@@ -164,7 +171,12 @@ public class Board : MonoBehaviour {
 			possState[root[0]+dir[0], root[1]+dir[1]] = true;
 			BoardCells[root[0]+dir[0], root[1]+dir[1]].bounceQueue = (Queue)BoardCells[root[0], root[1]].bounceQueue.Clone();
 			BoardCells[root[0]+dir[0], root[1]+dir[1]].bounceQueue.Enqueue(new int[2]{root[0]+dir[0], root[1]+dir[1]});
-			arrivableList.Enqueue(new int[2]{root[0]+dir[0], root[1]+dir[1]});
+			int[] tmp = new int[2]{root[0]+dir[0], root[1]+dir[1]};
+			if (!arrivableList.Contains(tmp)){
+				arrivableList.Enqueue(tmp);
+				searchQueue.Enqueue(tmp);
+			}
+
 		}
 	}
 
@@ -210,22 +222,22 @@ public class Board : MonoBehaviour {
 			}
 
 		while (searchQueue.Count != 0) {
-			root = (int[])searchQueue.Dequeue();
-			for(int i = 0; i < 6; ++i)
-				SearchJumpDirection(root, jumpDirections[i], ref possState, ref searchQueue);
+			root = (int[])searchQueue.Dequeue ();
+			for (int i = 0; i < 6; ++i)
+				SearchJumpDirection (root, jumpDirections [i], ref possState, ref searchQueue);
 		}
 
-		for (int i = 0; i < 6; ++i) {
-			SearchMoveDirection(hoodleCoord, moveDirections[i]);
-		}
-
-		while (arrivableList.Count > 0) {
-			int[] possibleCell = (int[])arrivableList.Dequeue();
-			if(BoardCells[possibleCell[0], possibleCell[1]].lightManager != null) {
-				lightOnList.Enqueue(possibleCell);
-				BoardCells[possibleCell[0], possibleCell[1]].lightManager.turnOnHighLight();
+			for (int i = 0; i < 6; ++i) {
+				SearchMoveDirection (hoodleCoord, moveDirections [i]);
 			}
-		}
+
+			while (arrivableList.Count > 0) {
+				int[] possibleCell = (int[])arrivableList.Dequeue ();
+				if (BoardCells [possibleCell [0], possibleCell [1]].lightManager != null) {
+					lightOnList.Enqueue (possibleCell);
+					BoardCells [possibleCell [0], possibleCell [1]].lightManager.turnOnHighLight ();
+				}
+			}
 	}
 
 	//game manager uses this method to control the current player
@@ -254,4 +266,60 @@ public class Board : MonoBehaviour {
 		else
 			return 6;
 	}
+
+
+	//Update for different game modes
+	public void UpdateGameMode(int row, int col){
+		//for different game modes
+		if (gameManager.gameMode == 2)
+			TimeModeUpdate (row, col);
+		if (gameManager.gameMode == 3 && !GameModeInitialized)
+			ObstacleModeUpdate ();
+	}
+
+	void TimeModeUpdate(int row, int col){
+		//delete pickUps
+		if (BoardCells [row, col].withPickUps > -1) {
+			gameManager.DelPickUp(BoardCells [row, col].withPickUps);
+			BoardCells [row, col].withPickUps = -1;
+			int tmp = (int)Random.Range(5,15);
+			gameManager.SetTimeInterval(tmp);
+		}
+
+		//add more pickUps
+		//only try 10 time, if still fails, the give up
+		for (int k=0;k<10;k++) {
+			//generate at white space
+			int i = (int)Random.Range(4,13);
+			int j = 0;
+			if (i<8) j = (int)Random.Range(4,i+5);
+			else j = (int)Random.Range(i-4,13);
+			if (BoardCells [i, j] != null && !BoardCells [i, j].cellOccupied && BoardCells [i, j].withPickUps == -1) {
+				Vector3 pos = new Vector3 (BoardCells [i, j].cellPos.x, 10.3f, BoardCells [i, j].cellPos.y);
+				BoardCells [i, j].withPickUps = gameManager.SetPickUpPos(pos);
+				return;
+			}
+		}
+	}
+
+	void ObstacleModeUpdate(){
+		GameModeInitialized = true;
+		int num = (int)Random.Range (2, 6);
+		for (int k=0; k<num; k++) {
+			for (int kk=0;kk<10;kk++) {
+			//generate at white space
+				int i = (int)Random.Range(4,13);
+				int j = 0;
+				if (i<8) j = (int)Random.Range(4,i+5);
+				else j = (int)Random.Range(i-4,13);
+				if (BoardCells [i, j] != null && !BoardCells [i, j].cellOccupied && BoardCells [i, j].withPickUps == -1) {
+					Vector3 pos = new Vector3 (BoardCells [i, j].cellPos.x, 10, BoardCells [i, j].cellPos.y);
+					gameManager.SetObstaclePos(pos);
+					BoardCells [i, j].cellOccupied = true;
+					break;
+				}
+			}
+		}
+	}
 }
+
