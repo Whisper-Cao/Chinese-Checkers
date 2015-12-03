@@ -7,6 +7,7 @@ public class FloorLightController : MonoBehaviour {
 	private Component halo;
 	private Board playBoard;
 	private bool lightOn = false;
+	private GameManager gameManager;
 
 	public int row;
 	public int col;
@@ -15,6 +16,7 @@ public class FloorLightController : MonoBehaviour {
 		playerCamera = GameObject.Find ("Main Camera").GetComponent<Camera> ();
 		playBoard = GameObject.FindGameObjectWithTag ("HoldBoard").GetComponent<Board> ();
 		playBoard.FixLight (this);//send its message to board
+		gameManager = GameObject.FindGameObjectWithTag ("PlayBoard").GetComponent<GameManager> ();
 	}
 
 	//translate the position of mouse into a point on the board
@@ -35,14 +37,16 @@ public class FloorLightController : MonoBehaviour {
 	}
 
 	//turn on the light in this cell
-	public void turnOnHighLight() {
-		halo = GetComponent("Halo"); 
-		halo.GetType().GetProperty("enabled").SetValue(halo, true, null);
+	public void TurnOnHighLight() {
+		if (gameManager.hintMode) {
+			halo = GetComponent ("Halo"); 
+			halo.GetType ().GetProperty ("enabled").SetValue (halo, true, null);
+		}
 		lightOn = true;
 	}
 
 	//turn off the light 
-	public void turnOffHighLight() {
+	public void TurnOffHighLight() {
 		halo = GetComponent("Halo"); 
 		halo.GetType().GetProperty("enabled").SetValue(halo, false, null);
 		lightOn = false;

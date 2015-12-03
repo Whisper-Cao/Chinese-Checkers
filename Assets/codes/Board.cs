@@ -4,24 +4,23 @@ using System.Collections;
 public class Board : MonoBehaviour {
 
 	private HoodleMove currHoodle;//current selected Hoodle
-	private Camera playerCamera;
-	private Transform BoradPos;
+	//private Camera playerCamera;
 	private int lightCounter; 
 	private Queue arrivableList;//board Cells that can be reached by currHoodle
 	private Queue lightOnList;//all the light currently on
 	private int currPlayer;
 	private GameManager gameManager;
-	private BoardCell[,] BoardCells = new BoardCell[17, 17];//all board cells
+	private BoardCell[,] boardCells = new BoardCell[17, 17];//all board cells
 	//player list
 	private string[] colorList = {"PlayerOrange", "PlayerGreen", "PlayerBlue", "PlayerRed", "PlayerYellow", "PlayerPurple", "None"};
 	//6 jump directions
-	private int[][] jumpDirections = new int[6][];
+	private int[][][] jumpDirections = new int[6][][];
 	//6 move directions
 	private int[][] moveDirections = new int[6][];
 	//numbers of hoodles already in the opposite section
 	private int[] arrivalCounters = new int[6];
 	//whether the game mode is initialized
-	private bool GameModeInitialized;
+	private bool gameModeInitialized;
 
 	//Data structure for each board cell.
 	private class BoardCell {
@@ -35,21 +34,33 @@ public class Board : MonoBehaviour {
 
 	//When intialized, a floor light controller sends message to board about which board cell it is mounted. 
 	public void FixLight(FloorLightController flc) {
-		BoardCells [flc.row, flc.col] = new BoardCell();    
-		BoardCells [flc.row, flc.col].cellPos = new Vector2 (flc.transform.position.x, flc.transform.position.z);
-		BoardCells [flc.row, flc.col].lightManager = flc;
+		boardCells [flc.row, flc.col] = new BoardCell();    
+		boardCells [flc.row, flc.col].cellPos = new Vector2 (flc.transform.position.x, flc.transform.position.z);
+		boardCells [flc.row, flc.col].lightManager = flc;
 	}
 
 	// Use this for initialization
 	void Start () {
 		//initialize search directions
+		for(int i = 0; i < 6; ++i) {
+			jumpDirections[i] = new int[6][];
+			for(int j = 0; j < 6; ++j)
+				jumpDirections[i][j] = new int[2];
+		}
+
 		for (int i = 0; i < 6; ++i) {
-			jumpDirections[i] = new int[2];
 			moveDirections[i] = new int[2];
-			jumpDirections [i][0] = (5 - i) / 3 * ((i + 1)% 2) * 2 + (i / 3) * (i % 2) * -2;
-			jumpDirections [i][1] = (5 - i) / 3 * ((i + 1) / 2) * 2 + (i / 3) * (i / 4) * -2;
-			moveDirections[i][0] = jumpDirections[i][0]/2;
-			moveDirections[i][1] = jumpDirections[i][1]/2;
+			jumpDirections [0][i][0] = (5 - i) / 3 * ((i + 1)% 2) * 2 + (i / 3) * (i % 2) * -2;
+			jumpDirections [0][i][1] = (5 - i) / 3 * ((i + 1) / 2) * 2 + (i / 3) * (i / 4) * -2;
+			moveDirections[i][0] = jumpDirections[0][i][0]/2;
+			moveDirections[i][1] = jumpDirections[0][i][1]/2;
+		}
+
+		for(int s = 1; s < 6; ++s) {
+			for(int i = 0; i < 6; ++i) {
+				jumpDirections [s][i][0] = (5 - i) / 3 * ((i + 1)% 2) * s * 2 + (i / 3) * (i % 2) * -2 * s;
+				jumpDirections [s][i][1] = (5 - i) / 3 * ((i + 1) / 2) * s * 2 + (i / 3) * (i / 4) * -2 * s;
+			}
 		}
 
 		for (int i = 0; i < 6; ++i)
@@ -58,18 +69,17 @@ public class Board : MonoBehaviour {
 		arrivableList = new Queue ();
 		lightOnList = new Queue ();
 		gameManager = GameObject.FindGameObjectWithTag ("PlayBoard").GetComponent<GameManager> ();
-		playerCamera = GameObject.Find ("Main Camera").GetComponent<Camera> ();
-		BoradPos = GetComponent<Transform> ();
-		GameModeInitialized = false;
+		//playerCamera = GameObject.Find ("Main Camera").GetComponent<Camera> ();
+		gameModeInitialized = false;
 	}
 
 	//when a hoodle is chosen, it uses this method to send request to the board for changing the currHoodle to itself
-	public bool UpDateCurrHoodle(HoodleMove newCurr) {
+	public bool UpdateCurrHoodle(HoodleMove newCurr) {
 		if (newCurr.tag.ToString() == colorList [currPlayer]) {
 			if (currHoodle != null && newCurr != null)
 				currHoodle.ResumeState ();
 			currHoodle = newCurr;
-			turnOffAllPoss ();
+			TurnOffAllPoss ();
 			if (currHoodle != null) {
 				//search for all reachable cells
 				SearchMovable (currHoodle.GetOnBoardPos ());
@@ -80,10 +90,10 @@ public class Board : MonoBehaviour {
 	}
 
 	//turn off all lights
-	void turnOffAllPoss() {
+	void TurnOffAllPoss() {
 		while (lightOnList.Count > 0) {
 			int[] nextTurnoff = (int[])lightOnList.Dequeue();
-			BoardCells[nextTurnoff[0], nextTurnoff[1]].lightManager.turnOffHighLight();
+			boardCells[nextTurnoff[0], nextTurnoff[1]].lightManager.TurnOffHighLight();
 		}
 	}
 
@@ -92,24 +102,24 @@ public class Board : MonoBehaviour {
 		Vector2 hoodlePos = new Vector2 (hoodle.GetTransformPos ().x, hoodle.GetTransformPos ().z);
 		float x = 100;
 		int y = 0, z = 0;
-		Vector2 tmp = new Vector2 (0, 0);
+		//Vector2 tmp = new Vector2 (0, 0);
 
 		//find a cell to place the hoodle
 		for (int i = 0; i < 17; ++i)
 			for (int j = 0; j < 17; ++j) {
-				if(BoardCells[i, j] != null && 
-			   		(hoodlePos - BoardCells [i, j].cellPos).magnitude < x && 
-			   		!BoardCells[i, j].cellOccupied) {
-					x = (hoodlePos - BoardCells [i, j].cellPos).magnitude;
+			if(boardCells[i, j] != null && 
+			   (hoodlePos - boardCells [i, j].cellPos).magnitude < x && 
+			   !boardCells[i, j].cellOccupied) {
+				x = (hoodlePos - boardCells [i, j].cellPos).magnitude;
 					y = i;
 					z = j;
-					tmp = BoardCells[i, j].cellPos;
+				//tmp = boardCells[i, j].cellPos;
 				}
 			}
-		BoardCells [16 - y, 16 - z].occupyingPlayer = translatePlayer (hoodle.tag.ToString ());
+		boardCells [16 - y, 16 - z].occupyingPlayer = TranslatePlayer (hoodle.tag.ToString ());
 		hoodle.SetCoordinate (y, z);
-		hoodle.SetPos (BoardCells [y, z].cellPos);
-		BoardCells [y, z].cellOccupied = true;
+		hoodle.SetPos (boardCells [y, z].cellPos);
+		boardCells [y, z].cellOccupied = true;
 	}
 
 
@@ -118,26 +128,26 @@ public class Board : MonoBehaviour {
 	//row and col are the coordiantes of chosen cell
 	public void LetMove(Vector3 destPos, int row, int col) {
 		if (currHoodle != null) {
-			BoardCells[(int)currHoodle.GetOnBoardPos()[0], (int)currHoodle.GetOnBoardPos()[1]].cellOccupied = false;
-			BoardCells[row, col].cellOccupied = true;
-			int playerNum = translatePlayer(currHoodle.tag.ToString());
-			if(playerNum == BoardCells[row,col].occupyingPlayer) {
+			boardCells[(int)currHoodle.GetOnBoardPos()[0], (int)currHoodle.GetOnBoardPos()[1]].cellOccupied = false;
+			boardCells[row, col].cellOccupied = true;
+			int playerNum = TranslatePlayer(currHoodle.tag.ToString());
+			if(playerNum == boardCells[row,col].occupyingPlayer) {
 				++arrivalCounters[playerNum];
 				if(arrivalCounters[playerNum] == 10)
 					gameManager.Win(currHoodle.tag.ToString());
 			}
-			if(playerNum == BoardCells[(int)currHoodle.GetOnBoardPos()[0], (int)currHoodle.GetOnBoardPos()[1]].occupyingPlayer)
+			if(playerNum == boardCells[(int)currHoodle.GetOnBoardPos()[0], (int)currHoodle.GetOnBoardPos()[1]].occupyingPlayer)
 				--arrivalCounters[playerNum];
 			currHoodle.SetCoordinate(row, col);
 			//send movements according to the bounce queue
-			while(BoardCells[row, col].bounceQueue.Count > 0){
-				int[] nextPos = (int[])BoardCells[row, col].bounceQueue.Dequeue();
-				Vector2 twodPos = BoardCells[nextPos[0], nextPos[1]].cellPos;
+			while(boardCells[row, col].bounceQueue.Count > 0){
+				int[] nextPos = (int[])boardCells[row, col].bounceQueue.Dequeue();
+				Vector2 twodPos = boardCells[nextPos[0], nextPos[1]].cellPos;
 				currHoodle.moveQueue.Enqueue(new Vector3(twodPos.x, 0, twodPos.y));
 				//check for time mode
 				UpdateGameMode(nextPos[0], nextPos[1]);
 			}
-			turnOffAllPoss();
+			TurnOffAllPoss();
 			currHoodle.NotifyMove();
 			currHoodle.ResumeState();
 			currHoodle = null;
@@ -150,27 +160,33 @@ public class Board : MonoBehaviour {
 
 	//subroutine of search for valid destination cells for a jump
 	void SearchJumpDirection(int[] root, int[] dir, ref bool[,] possState, ref Queue searchQueue) {
+		
+		int step = (int)(Mathf.Max (Mathf.Abs (dir [0]), Mathf.Abs (dir [1])));
 
-		bool boundedX = false, boundedY = false;
+		if (!(dir [0] >= 0 && root [0] + dir [0] < 17 || dir [0] < 0 && root [0] + dir [0] >= 0))
+			return;
 
-		if (dir [0] >= 0 && root[0] + dir [0] < 17)
-			boundedX = true;
-		else if (dir [0] < 0 && root[0] + dir [0] >= 0)
-			boundedX = true;
+		if (!(dir [1] >= 0 && root [1] + dir [1] < 17 || dir [1] < 0 && root [1] + dir [1] >= 0))
+			return;
 
-		if (dir [1] >= 0 && root[1] + dir [1] < 17)
-			boundedY = true;
-		else if (dir [1] < 0 && root[1] + dir [1] >= 0)
-			boundedY = true;
+		for (int i = 1; i < step / 2; ++i) {
+			if(!(boardCells[root[0]+dir[0]/step * i, root[1]+dir[1]/step * i] != null && !boardCells[root[0] + dir[0]/step * i, root[1] + dir[1]/step * i].cellOccupied))
+				return;
+		}
 
-		if(boundedX && boundedY && BoardCells[root[0]+dir[0], root[1]+dir[1]] != null &&
-		   BoardCells[root[0] + dir[0]/2, root[1] + dir[1]/2].cellOccupied && 
-		   !BoardCells[root[0]+ dir[0], root[1] + dir[1]].cellOccupied && 
+		for (int i = step / 2 + 1; i < step; ++i) {
+			if(!(boardCells[root[0]+dir[0]/step * i, root[1]+dir[1]/step * i] != null && !boardCells[root[0] + dir[0] / step * i, root[1] + dir[1] / step * i].cellOccupied))
+				return;
+		}
+
+		if(boardCells[root[0]+dir[0], root[1]+dir[1]] != null && 
+		   boardCells[root[0] + dir[0]/2, root[1] + dir[1]/2].cellOccupied && 
+		   !boardCells[root[0]+ dir[0], root[1] + dir[1]].cellOccupied && 
 		   !possState[root[0]+dir[0], root[1]+dir[1]]) {
 			searchQueue.Enqueue(root);
 			possState[root[0]+dir[0], root[1]+dir[1]] = true;
-			BoardCells[root[0]+dir[0], root[1]+dir[1]].bounceQueue = (Queue)BoardCells[root[0], root[1]].bounceQueue.Clone();
-			BoardCells[root[0]+dir[0], root[1]+dir[1]].bounceQueue.Enqueue(new int[2]{root[0]+dir[0], root[1]+dir[1]});
+			boardCells[root[0]+dir[0], root[1]+dir[1]].bounceQueue = (Queue)boardCells[root[0], root[1]].bounceQueue.Clone();
+			boardCells[root[0]+dir[0], root[1]+dir[1]].bounceQueue.Enqueue(new int[2]{root[0]+dir[0], root[1]+dir[1]});
 			int[] tmp = new int[2]{root[0]+dir[0], root[1]+dir[1]};
 			if (!arrivableList.Contains(tmp)){
 				arrivableList.Enqueue(tmp);
@@ -183,23 +199,17 @@ public class Board : MonoBehaviour {
 	//check for valid destination cells for a move
 	void SearchMoveDirection(int[] hoodleCoord, int[] dir) {
 
-		bool boundedX = false, boundedY = false;
+		if (!((dir [0] >= 0 && hoodleCoord [0] + dir [0] < 17) || (dir [0] < 0 && hoodleCoord [0] + dir [0] >= 0)))
+			return;
 
-		if (dir [0] >= 0 && (int)hoodleCoord[0] + dir [0] < 17)
-			boundedX = true;
-		else if (dir [0] < 0 && (int)hoodleCoord[0] + dir [0] >= 0)
-			boundedX = true;
+		if (!((dir [1] >= 0 && hoodleCoord [1] + dir [1] < 17) || (dir [1] < 0 && hoodleCoord [1] + dir [1] >= 0)))
+			return;
 
-		if (dir [1] >= 0 && (int)hoodleCoord[1] + dir [1] < 17)
-			boundedY = true;
-		else if (dir [1] < 0 && (int)hoodleCoord[1] + dir [1] >= 0)
-			boundedY = true;
-
-		if(boundedX && boundedY && BoardCells[(int)hoodleCoord[0] + dir[0], (int)hoodleCoord[1] + dir[1]] != null &&
-		   !BoardCells[(int)hoodleCoord[0] + dir[0], (int)hoodleCoord[1] + dir[1]].cellOccupied &&
-		   BoardCells[(int)hoodleCoord[0]+dir[0], (int)hoodleCoord[1] + dir[1]].lightManager != null) {
-			BoardCells[(int)hoodleCoord[0]+dir[0], (int)hoodleCoord[1] + dir[1]].bounceQueue = new Queue();
-			BoardCells[(int)hoodleCoord[0]+dir[0], (int)hoodleCoord[1]+ dir[1]].bounceQueue.Enqueue(new int[2]{hoodleCoord[0]+dir[0], hoodleCoord[1]+dir[1]});
+		if(boardCells[(int)hoodleCoord[0] + dir[0], (int)hoodleCoord[1] + dir[1]] != null &&
+		   !boardCells[(int)hoodleCoord[0] + dir[0], (int)hoodleCoord[1] + dir[1]].cellOccupied &&
+		   boardCells[(int)hoodleCoord[0]+dir[0], (int)hoodleCoord[1] + dir[1]].lightManager != null) {
+			boardCells[(int)hoodleCoord[0]+dir[0], (int)hoodleCoord[1] + dir[1]].bounceQueue = new Queue();
+			boardCells[(int)hoodleCoord[0]+dir[0], (int)hoodleCoord[1]+ dir[1]].bounceQueue.Enqueue(new int[2]{hoodleCoord[0]+dir[0], hoodleCoord[1]+dir[1]});
 			arrivableList.Enqueue(new int[2]{hoodleCoord[0]+dir[0], hoodleCoord[1]+dir[1]});
 		}
 	}
@@ -217,40 +227,50 @@ public class Board : MonoBehaviour {
 
 		for (int i = 0; i < 17; ++i)
 			for (int j = 0; j < 17; ++j) {
-				if(BoardCells[i,j] != null)
-					BoardCells [i, j].bounceQueue.Clear ();
+			if(boardCells[i,j] != null)
+				boardCells [i, j].bounceQueue.Clear ();
 			}
 
+		boardCells[hoodleCoord[0], hoodleCoord[1]].cellOccupied = false;
 		while (searchQueue.Count != 0) {
 			root = (int[])searchQueue.Dequeue ();
-			for (int i = 0; i < 6; ++i)
-				SearchJumpDirection (root, jumpDirections [i], ref possState, ref searchQueue);
+			if(!gameManager.flyMode) {
+				print ("Normal Search");
+				for (int i = 0; i < 6; ++i)
+					SearchJumpDirection (root, jumpDirections [0][i], ref possState, ref searchQueue);
+			}
+			else 
+				for(int s = 0; s < 6; ++s)
+					for(int i = 0; i < 6; ++i) {
+						SearchJumpDirection(root, jumpDirections[s][i], ref possState, ref searchQueue);
+				}
+		}
+		boardCells[hoodleCoord[0], hoodleCoord[1]].cellOccupied = true;
+
+		for (int i = 0; i < 6; ++i) {
+			SearchMoveDirection (hoodleCoord, moveDirections [i]);
 		}
 
-			for (int i = 0; i < 6; ++i) {
-				SearchMoveDirection (hoodleCoord, moveDirections [i]);
+		while (arrivableList.Count > 0) {
+			int[] possibleCell = (int[])arrivableList.Dequeue ();
+			if (boardCells [possibleCell [0], possibleCell [1]].lightManager != null) {
+				lightOnList.Enqueue (possibleCell);
+				boardCells [possibleCell [0], possibleCell [1]].lightManager.TurnOnHighLight ();
 			}
-
-			while (arrivableList.Count > 0) {
-				int[] possibleCell = (int[])arrivableList.Dequeue ();
-				if (BoardCells [possibleCell [0], possibleCell [1]].lightManager != null) {
-					lightOnList.Enqueue (possibleCell);
-					BoardCells [possibleCell [0], possibleCell [1]].lightManager.turnOnHighLight ();
-				}
-			}
+		}
 	}
 
 	//game manager uses this method to control the current player
-	public void setPlayer(int newPlayer) {
+	public void SetPlayer(int newPlayer) {
 		currPlayer = newPlayer;
 		if (currHoodle != null) {
 			currHoodle.ResumeState();
-			turnOffAllPoss();
+			TurnOffAllPoss();
 		}
 	}
 
 	//translate the name of a player into its number
-	int translatePlayer(string name) {
+	int TranslatePlayer(string name) {
 		if (name == "PlayerOrange")
 			return 0;
 		else if (name == "PlayerGreen")
@@ -271,17 +291,17 @@ public class Board : MonoBehaviour {
 	//Update for different game modes
 	public void UpdateGameMode(int row, int col){
 		//for different game modes
-		if (gameManager.gameMode == 2)
+		if (gameManager.timeMode)
 			TimeModeUpdate (row, col);
-		if (gameManager.gameMode == 3 && !GameModeInitialized)
+		if (gameManager.obstacleMode && !gameModeInitialized)
 			ObstacleModeUpdate ();
 	}
 
 	void TimeModeUpdate(int row, int col){
 		//delete pickUps
-		if (BoardCells [row, col].withPickUps > -1) {
-			gameManager.DelPickUp(BoardCells [row, col].withPickUps);
-			BoardCells [row, col].withPickUps = -1;
+		if (boardCells [row, col].withPickUps > -1) {
+			gameManager.DelPickUp(boardCells [row, col].withPickUps);
+			boardCells [row, col].withPickUps = -1;
 			int tmp = (int)Random.Range(5,15);
 			gameManager.SetTimeInterval(tmp);
 		}
@@ -294,16 +314,16 @@ public class Board : MonoBehaviour {
 			int j = 0;
 			if (i<8) j = (int)Random.Range(4,i+5);
 			else j = (int)Random.Range(i-4,13);
-			if (BoardCells [i, j] != null && !BoardCells [i, j].cellOccupied && BoardCells [i, j].withPickUps == -1) {
-				Vector3 pos = new Vector3 (BoardCells [i, j].cellPos.x, 10.3f, BoardCells [i, j].cellPos.y);
-				BoardCells [i, j].withPickUps = gameManager.SetPickUpPos(pos);
+			if (boardCells [i, j] != null && !boardCells [i, j].cellOccupied && boardCells [i, j].withPickUps == -1) {
+				Vector3 pos = new Vector3 (boardCells [i, j].cellPos.x, 10.3f, boardCells [i, j].cellPos.y);
+				boardCells [i, j].withPickUps = gameManager.SetPickUpPos(pos);
 				return;
 			}
 		}
 	}
 
 	void ObstacleModeUpdate(){
-		GameModeInitialized = true;
+		gameModeInitialized = true;
 		int num = (int)Random.Range (2, 6);
 		for (int k=0; k<num; k++) {
 			for (int kk=0;kk<10;kk++) {
@@ -312,10 +332,10 @@ public class Board : MonoBehaviour {
 				int j = 0;
 				if (i<8) j = (int)Random.Range(4,i+5);
 				else j = (int)Random.Range(i-4,13);
-				if (BoardCells [i, j] != null && !BoardCells [i, j].cellOccupied && BoardCells [i, j].withPickUps == -1) {
-					Vector3 pos = new Vector3 (BoardCells [i, j].cellPos.x, 10, BoardCells [i, j].cellPos.y);
+				if (boardCells [i, j] != null && !boardCells [i, j].cellOccupied && boardCells [i, j].withPickUps == -1) {
+					Vector3 pos = new Vector3 (boardCells [i, j].cellPos.x, 10, boardCells [i, j].cellPos.y);
 					gameManager.SetObstaclePos(pos);
-					BoardCells [i, j].cellOccupied = true;
+					boardCells [i, j].cellOccupied = true;
 					break;
 				}
 			}
