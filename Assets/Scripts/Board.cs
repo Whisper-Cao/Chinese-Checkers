@@ -334,6 +334,7 @@ public class Board : MonoBehaviour {
 					Vector3 pos = new Vector3 (boardCells [i, j].cellPos.x, 0, boardCells [i, j].cellPos.y);
 					gameManager.SetObstaclePos(pos);
 					boardCells [i, j].cellOccupied = true;
+					print("A");
 					break;
 				}
 			}
