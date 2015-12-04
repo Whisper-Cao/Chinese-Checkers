@@ -4,6 +4,9 @@ using System.Collections;
 
 //game manager to control the turns of players
 public class GameManager : MonoBehaviour {
+
+	public GameObject[] cameras;
+	public Camera currentCamera;
 	
 	private int currPlayer;//currPlayer number, 6 for no player
 	private int timer;
@@ -99,6 +102,8 @@ public class GameManager : MonoBehaviour {
 		for (int i=0; i<6; i++) {
 			playerTimeInterval[i] = timeInterval;
 		}
+
+		currentCamera = cameras[0].GetComponent<Camera>();
 	}
 
 	//decrease the timer every 60 frames if there is a player thinking
@@ -137,6 +142,7 @@ public class GameManager : MonoBehaviour {
 			timeText.text = (timer / 60 + 1).ToString ();
 			board.SetPlayer (currPlayer);
 			locker = false;
+			SwitchCamera(currPlayer);
 		}
 	}
 
@@ -374,5 +380,17 @@ public class GameManager : MonoBehaviour {
 		startButton.GetComponent<Image> ().enabled = false;
 		startButton.GetComponentInChildren<Text> ().enabled = false;
 		EntryEnable (true);
+	}
+
+	void SwitchCamera(int camera) {
+		for (int i = 0; i != 6; ++i) {
+			if (i == camera) {
+				currentCamera = cameras[i].GetComponent<Camera>();
+				currentCamera.enabled = true;
+			}
+			else {
+				cameras[i].GetComponent<Camera>().enabled = false;
+			}
+		}
 	}
 }

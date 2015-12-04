@@ -315,7 +315,7 @@ public class Board : MonoBehaviour {
 			if (i<8) j = (int)Random.Range(4,i+5);
 			else j = (int)Random.Range(i-4,13);
 			if (boardCells [i, j] != null && !boardCells [i, j].cellOccupied && boardCells [i, j].withPickUps == -1) {
-				Vector3 pos = new Vector3 (boardCells [i, j].cellPos.x, 10.3f, boardCells [i, j].cellPos.y);
+				Vector3 pos = new Vector3 (boardCells [i, j].cellPos.x, 0.3f, boardCells [i, j].cellPos.y);
 				boardCells [i, j].withPickUps = gameManager.SetPickUpPos(pos);
 				return;
 			}
@@ -333,7 +333,7 @@ public class Board : MonoBehaviour {
 				if (i<8) j = (int)Random.Range(4,i+5);
 				else j = (int)Random.Range(i-4,13);
 				if (boardCells [i, j] != null && !boardCells [i, j].cellOccupied && boardCells [i, j].withPickUps == -1) {
-					Vector3 pos = new Vector3 (boardCells [i, j].cellPos.x, 10, boardCells [i, j].cellPos.y);
+					Vector3 pos = new Vector3 (boardCells [i, j].cellPos.x, 0, boardCells [i, j].cellPos.y);
 					gameManager.SetObstaclePos(pos);
 					boardCells [i, j].cellOccupied = true;
 					break;
