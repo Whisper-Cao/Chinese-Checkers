@@ -21,6 +21,11 @@ public class FloorLightController : MonoBehaviour {
 	//translate the position of mouse into a point on the board
 	Vector3 TranslateMousePos (Vector3 mousePos) {
 		playerCamera = gameManager.cameras[gameManager.currentCameraNum].GetComponent<Camera>();
+		if (gameManager.currentCameraNum == 6) {
+			mousePos = playerCamera.ScreenToWorldPoint(mousePos);
+			mousePos.y = 0.0f;
+			return mousePos;
+		}
 		Ray mouseRay = playerCamera.ScreenPointToRay (mousePos);
 		Vector3 dest = playerCamera.transform.position + (transform.position.y - playerCamera.transform.position.y) * mouseRay.direction.normalized / mouseRay.direction.normalized.y;
 		return dest;
