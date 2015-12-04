@@ -103,6 +103,12 @@ public class GameManager : MonoBehaviour {
 			playerTimeInterval[i] = timeInterval;
 		}
 
+		cameras[0].GetComponent<Camera>().enabled = true;
+
+		for (int i = 1; i != 6; ++i) {
+			cameras[i].GetComponent<Camera>().enabled = false;
+		}
+
 		currentCamera = cameras[0].GetComponent<Camera>();
 	}
 
