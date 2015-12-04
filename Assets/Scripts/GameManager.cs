@@ -202,18 +202,6 @@ public class GameManager : MonoBehaviour {
 			yellowHoodles [i].SetActive (true);
 			yellowHoodles[i].GetComponent<HoodleMove>().AllowOccupy();
 		}
-		for (int i = 0; i < greenHoodles.Length; ++i) {
-			yellowHoodles [i].SetActive (true);
-			yellowHoodles[i].GetComponent<HoodleMove>().AllowOccupy();
-		}
-		for (int i = 0; i < redHoodles.Length; ++i) {
-			yellowHoodles [i].SetActive (true);
-			yellowHoodles[i].GetComponent<HoodleMove>().AllowOccupy();
-		}
-		for (int i = 0; i < purpleHoodles.Length; ++i) {
-			yellowHoodles [i].SetActive (true);
-			yellowHoodles[i].GetComponent<HoodleMove>().AllowOccupy();
-		}
 
 		currPlayer = 0;
 		board.SetPlayer (currPlayer);

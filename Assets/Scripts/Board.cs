@@ -5,7 +5,6 @@ public class Board : MonoBehaviour {
 
 	private HoodleMove currHoodle;//current selected Hoodle
 	//private Camera playerCamera;
-	private int lightCounter; 
 	private Queue arrivableList;//board Cells that can be reached by currHoodle
 	private Queue lightOnList;//all the light currently on
 	private int currPlayer;
@@ -266,6 +265,7 @@ public class Board : MonoBehaviour {
 		if (currHoodle != null) {
 			currHoodle.ResumeState();
 			TurnOffAllPoss();
+			currHoodle = null;
 		}
 	}
 
