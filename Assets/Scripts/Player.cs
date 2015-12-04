@@ -18,8 +18,13 @@ public class Player : MonoBehaviour {
 		float moveHorizontal = Input.GetAxis ("Horizontal");
 		float moveVertical = Input.GetAxis ("Vertical");
 		
-		Vector3 movement = new Vector3 (moveHorizontal, 0.0f, moveVertical);
+		Vector3 movement = new Vector3 (moveHorizontal, 0.0f, moveVertical) * speed;
 		
-		rb.transform.position += (movement / 4);
+		rb.position = new Vector3
+		(
+			Mathf.Clamp(rb.position.x + movement.x, -8, 8),
+			0.0f,
+			Mathf.Clamp(rb.position.z + movement.z, -8, 8)
+		);
 	}
 }

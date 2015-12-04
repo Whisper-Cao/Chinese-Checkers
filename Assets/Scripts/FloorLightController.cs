@@ -2,9 +2,9 @@
 using System.Collections;
 
 public class FloorLightController : MonoBehaviour {
-
-	private Camera playerCamera;
+	
 	private Component halo;
+	private Camera playerCamera;
 	private Board playBoard;
 	private bool lightOn = false;
 	private GameManager gameManager;
@@ -13,7 +13,6 @@ public class FloorLightController : MonoBehaviour {
 	public int col;
 
 	void Awake() {
-		playerCamera = GameObject.Find ("Main Camera").GetComponent<Camera> ();
 		playBoard = GameObject.FindGameObjectWithTag ("HoldBoard").GetComponent<Board> ();
 		playBoard.FixLight (this);//send its message to board
 		gameManager = GameObject.FindGameObjectWithTag ("PlayBoard").GetComponent<GameManager> ();
@@ -21,6 +20,7 @@ public class FloorLightController : MonoBehaviour {
 
 	//translate the position of mouse into a point on the board
 	Vector3 TranslateMousePos (Vector3 mousePos) {
+		playerCamera = gameManager.currentCamera;
 		Ray mouseRay = playerCamera.ScreenPointToRay (mousePos);
 		Vector3 dest = playerCamera.transform.position + (transform.position.y - playerCamera.transform.position.y) * mouseRay.direction.normalized / mouseRay.direction.normalized.y;
 		return dest;
