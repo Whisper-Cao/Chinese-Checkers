@@ -3,7 +3,12 @@ guid: ed7199a6249744bfbbf80f453a9996c4
 ModelImporter:
   serializedVersion: 18
   fileIDToRecycleName:
+    100000: //RootNode
+    400000: //RootNode
+    2300000: //RootNode
+    3300000: //RootNode
     4300000: Feet Stand
+    11100000: //RootNode
   materials:
     importMaterials: 0
     materialName: 0

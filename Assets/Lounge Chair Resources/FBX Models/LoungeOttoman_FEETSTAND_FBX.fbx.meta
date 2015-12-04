@@ -3,7 +3,12 @@ guid: 064a1b478f18c48deb6597277df208cf
 ModelImporter:
   serializedVersion: 18
   fileIDToRecycleName:
+    100000: //RootNode
+    400000: //RootNode
+    2300000: //RootNode
+    3300000: //RootNode
     4300000: Feet Stand Ottoman
+    11100000: //RootNode
   materials:
     importMaterials: 0
     materialName: 0

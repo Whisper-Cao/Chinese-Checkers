@@ -111,4 +111,12 @@ public class HoodleMove : MonoBehaviour {
 		halo = GetComponent("Halo"); 
 		halo.GetType().GetProperty("enabled").SetValue(halo, false, null);
 	}
+
+	void OnTriggerEnter(Collider other) {
+		if (other.gameObject.tag == "PickUp"){
+			other.gameObject.SetActive(false);
+			int tmp = (int)Random.Range(5,15);
+			gameManager.SetTimeInterval(tmp);
+		}
+	}
 }
