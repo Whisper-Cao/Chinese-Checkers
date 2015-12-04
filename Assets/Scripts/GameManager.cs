@@ -7,6 +7,7 @@ public class GameManager : MonoBehaviour {
 
 	public GameObject[] cameras;
 	public Camera currentCamera;
+	public int currentCameraNum;
 	
 	private int currPlayer;//currPlayer number, 6 for no player
 	private int timer;
@@ -110,6 +111,7 @@ public class GameManager : MonoBehaviour {
 		}
 
 		currentCamera = cameras[0].GetComponent<Camera>();
+		currentCameraNum = 0;
 	}
 
 	//decrease the timer every 60 frames if there is a player thinking
@@ -119,15 +121,7 @@ public class GameManager : MonoBehaviour {
 				--timer;
 				timeText.text = (timer / 60 + 1).ToString ();
 				if (timer == 0) {//if time out, next player
-					if(mode == 2)
-						currPlayer = (currPlayer + 3) % 6;
-					else if(mode == 3)
-						currPlayer = (currPlayer + 2) % 6;
-					else if(mode == 6)
-						currPlayer = (currPlayer + 1) % 6;
-					timer =  playerTimeInterval[currPlayer] * 60;
-					playerText.text = playerList [currPlayer];
-					board.SetPlayer (currPlayer);
+					nextPlayer();
 				}
 			} else 
 				timeText.text = "Jumping";
@@ -393,6 +387,7 @@ public class GameManager : MonoBehaviour {
 			if (i == camera) {
 				currentCamera = cameras[i].GetComponent<Camera>();
 				currentCamera.enabled = true;
+				currentCameraNum = i;
 			}
 			else {
 				cameras[i].GetComponent<Camera>().enabled = false;
