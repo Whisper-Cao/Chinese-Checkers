@@ -57,6 +57,10 @@ public class GameManager : MonoBehaviour {
 	public bool flyMode;
 	public bool hintMode;
 
+	//for delay
+	private bool delayLock;
+	private int delayTimer;
+
 	void Start () {
 		locker = true;
 		board = GameObject.FindGameObjectWithTag ("HoldBoard").GetComponent<Board> ();
@@ -110,6 +114,9 @@ public class GameManager : MonoBehaviour {
 		}
 
 		currentCamera = cameras[0].GetComponent<Camera>();
+		//for delay
+		delayLock = false;
+		delayTimer = 0;
 	}
 
 	//decrease the timer every 60 frames if there is a player thinking
@@ -131,6 +138,15 @@ public class GameManager : MonoBehaviour {
 				}
 			} else 
 				timeText.text = "Jumping";
+		}
+		if (delayLock) {
+			delayTimer--;
+			if (delayTimer<=0){
+				delayLock = false;
+				locker = false;
+				winPanel.enabled = false;
+				winText.enabled = false;
+			}
 		}
 	}
 
@@ -161,6 +177,7 @@ public class GameManager : MonoBehaviour {
 	public void Win(string player) {
 		timeText.text = "Game over";
 		winPanel.enabled = true;
+		winText.enabled = true;
 		winText.text = player + " win!";
 		board.SetPlayer (6);
 		currPlayer = 6;
@@ -293,6 +310,9 @@ public class GameManager : MonoBehaviour {
 			if (pickUp [i].activeSelf==false){
 				pickUp [i].SetActive (true);
 				pickUp [i].transform.position = pos;
+				pickUp [i].GetComponent<PickUpRotate>().Reset();
+				BoxCollider bc = pickUp [i].GetComponent<BoxCollider>();
+				bc.enabled = false;
 				return i;
 			}
 		}
@@ -304,11 +324,27 @@ public class GameManager : MonoBehaviour {
 			return;
 		pickUp [num].SetActive (false);
 	}
+
+	//Enable PickUp Collider
+	public void EnablePickUpCollider(int num){
+		if (num < 0 || num >= pickUp.Length)
+			return;
+		BoxCollider bc = pickUp [num].GetComponent<BoxCollider>();
+		bc.enabled = true;
+	}
+
 	//change timeInterval
 	public void SetTimeInterval(int newTime){
 		playerTimeInterval[currPlayer] = newTime;
 		if (timer >  playerTimeInterval[currPlayer] * 60)
 			timer =  playerTimeInterval[currPlayer] * 60;
+		locker = true;
+		winPanel.enabled = true;
+		winText.enabled = true;
+		winText.text = playerList[currPlayer] + " Time Set: " + newTime;
+		//here needs delayQAQ
+		delayLock = true;
+		delayTimer = 90;
 	}
 	
 	//set active and set the position of obstacles

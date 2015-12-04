@@ -300,10 +300,8 @@ public class Board : MonoBehaviour {
 	void TimeModeUpdate(int row, int col){
 		//delete pickUps
 		if (boardCells [row, col].withPickUps > -1) {
-			gameManager.DelPickUp(boardCells [row, col].withPickUps);
+			gameManager.EnablePickUpCollider(boardCells [row, col].withPickUps);
 			boardCells [row, col].withPickUps = -1;
-			int tmp = (int)Random.Range(5,15);
-			gameManager.SetTimeInterval(tmp);
 		}
 
 		//add more pickUps
