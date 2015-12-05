@@ -5,10 +5,10 @@ using System.Collections;
 //game manager to control the turns of players
 public class GameManager : MonoBehaviour {
 
-	public GameObject[] cameras;
+	public GameObject[] cameras;	//Cameras
 	public Camera currentCamera;
 	public int currentCameraNum;
-	public bool isUpDown;
+	public bool isUpDown;			//If the perspective is up-down
 	
 	private int currPlayer;//currPlayer number, 6 for no player
 	private int timer;
@@ -34,6 +34,7 @@ public class GameManager : MonoBehaviour {
 	private Button sixPlayerButton;
 	private Button startButton;
 	private Toggle[] gameModeToggle;
+	private Toggle cameraToggle;
 	private Image startPanel;
 
 	//arrays keeping the same color of hoodles
@@ -58,16 +59,26 @@ public class GameManager : MonoBehaviour {
 	public bool obstacleMode;
 	public bool flyMode;
 	public bool hintMode;
+	public bool maniaMode;
+
+	public bool playerReset;   //Reset the position of the player
+
+	public bool isTheFirstTry;  //In normal mode, if the selection of one hoodle is the first try of the player
+	public int theFirstHoodleCoordinateX, theFirstHoodleCoordinateY; //The first-selected hoodle's coordinates
 
 	void Start () {
 		locker = true;
 		board = GameObject.FindGameObjectWithTag ("HoldBoard").GetComponent<Board> ();
 		playerText = GameObject.FindGameObjectWithTag ("PlayerTextTag").GetComponent<Text> ();
 		timeText = GameObject.FindGameObjectWithTag ("TimeTextTag").GetComponent<Text> ();
+		cameraToggle = GameObject.FindGameObjectWithTag("CameraToggleTag").GetComponent<Toggle> ();
 		playerText.enabled = false;
 		playerText.GetComponentInChildren<Image> ().enabled = false;
 		timeText.enabled = false;
 		timeText.GetComponentInChildren<Image> ().enabled = false;
+		cameraToggle.enabled = false;
+		cameraToggle.GetComponentInChildren<Image> ().enabled = false;
+		cameraToggle.GetComponentInChildren<Text>().enabled = false;
 
 		DisableAllHoodles ();
 		DisableAllExtraElements ();
@@ -80,16 +91,17 @@ public class GameManager : MonoBehaviour {
 		sixPlayerButton = GameObject.FindGameObjectWithTag ("6PlayerButton").GetComponent<Button> ();
 		EntryEnable (false);
 
-		gameModeToggle = new Toggle[4];
+		gameModeToggle = new Toggle[5];
 		gameModeToggle [0] = GameObject.FindGameObjectWithTag ("TimeModeToggleTag").GetComponent<Toggle> ();
 		gameModeToggle [1] = GameObject.FindGameObjectWithTag ("ObstacleModeToggleTag").GetComponent<Toggle> ();
 		gameModeToggle [2] = GameObject.FindGameObjectWithTag ("FlyModeToggleTag").GetComponent<Toggle> ();
 		gameModeToggle [3] = GameObject.FindGameObjectWithTag ("HintModeToggleTag").GetComponent<Toggle> ();
+		gameModeToggle [4] = GameObject.FindGameObjectWithTag ("ManiaModeToggleTag").GetComponent<Toggle>();
 
-		for (int i = 0; i < 4; ++i)
+		for (int i = 0; i < 5; ++i)
 			gameModeToggle [i].isOn = false;
 
-		timeMode = obstacleMode = flyMode = hintMode = false;
+		timeMode = obstacleMode = flyMode = hintMode = maniaMode = false;
 
 		startButton = GameObject.FindGameObjectWithTag ("StartButtonTag").GetComponent<Button> ();
 
@@ -115,6 +127,9 @@ public class GameManager : MonoBehaviour {
 		currentCameraNum = 0;
 
 		isUpDown = false;
+		isTheFirstTry = true;
+		theFirstHoodleCoordinateX = -1;
+		theFirstHoodleCoordinateY = -1;
 	}
 
 	//decrease the timer every 60 frames if there is a player thinking
@@ -145,15 +160,25 @@ public class GameManager : MonoBehaviour {
 			timeText.text = (timer / 60 + 1).ToString ();
 			board.SetPlayer (currPlayer);
 			locker = false;
-			if (!isUpDown) {
+			if (!isUpDown) {						//Switch camera automatically
 				SwitchCamera(currPlayer);
+				playerReset = true;
 			}
+			else {									//Rotate the orthographic camera
+				cameras[6].transform.eulerAngles = new Vector3(90.0f, 60.0f * currPlayer, 0.0f);
+			}
+
+			isTheFirstTry = true;					// Reset the first selected hoodle
+			theFirstHoodleCoordinateX = -1;
+			theFirstHoodleCoordinateY = -1;
 		}
 	}
 
 	//a hoodle is going to jump
 	public void hoodleReady() {
-		locker = true;
+		if (maniaMode) {							// If in normal node, jumping won't stop the timer
+			locker = true;
+		}
 	}
 
 	//display win message
@@ -168,12 +193,7 @@ public class GameManager : MonoBehaviour {
 
 	//start a two player game
 	public void TwoPlayerGameStart() {
-		startPanel.enabled = false;
-		EntryEnable (false);
-		playerText.enabled = true;
-		playerText.GetComponentInChildren<Image> ().enabled = true;
-		timeText.enabled = true;
-		timeText.GetComponentInChildren<Image> ().enabled = true;
+		GameStartUISetup();
 
 		//put the hoodles of orange and red players on the board
 		for (int i = 0; i < orangeHoodles.Length; ++i) {
@@ -193,12 +213,7 @@ public class GameManager : MonoBehaviour {
 
 	//start a three player game
 	public void ThreePlayersGameStart() {
-		startPanel.enabled = false;
-		EntryEnable (false);
-		playerText.enabled = true;
-		playerText.GetComponentInChildren<Image> ().enabled = true;
-		timeText.enabled = true;
-		timeText.GetComponentInChildren<Image> ().enabled = true;
+		GameStartUISetup();
 
 		//put hoodles of orange, blue and yellow players on the board
 		for (int i = 0; i < orangeHoodles.Length; ++i) {
@@ -221,13 +236,8 @@ public class GameManager : MonoBehaviour {
 	}
 
 	public void SixPlayersGameStart() {
-		startPanel.enabled = false;
-		EntryEnable (false);
-		playerText.enabled = true;
-		playerText.GetComponentInChildren<Image> ().enabled = true;
-		timeText.enabled = true;
-		timeText.GetComponentInChildren<Image> ().enabled = true;
-		
+		GameStartUISetup();
+
 		//put hoodles of orange, blue and yellow players on the board
 		for (int i = 0; i < orangeHoodles.Length; ++i) {
 			orangeHoodles [i].SetActive (true);
@@ -278,6 +288,10 @@ public class GameManager : MonoBehaviour {
 	//highlight hint game mode
 	public void GameModeHint() {
 		hintMode = !hintMode;
+	}
+
+	public void GameModeMania() {
+		maniaMode = !maniaMode;
 	}
 
 	//set active and set the position of pickUps
@@ -374,7 +388,7 @@ public class GameManager : MonoBehaviour {
 	}
 
 	public void GameModeChoiceDis() {
-		for (int i=0; i<4; i++) {
+		for (int i=0; i<5; i++) {
 			gameModeToggle[i].enabled = false;
 			Image[] images = gameModeToggle[i].GetComponentsInChildren<Image> ();
 			for(int j = 0; j < images.Length; ++j)
@@ -400,14 +414,30 @@ public class GameManager : MonoBehaviour {
 		}
 	}
 
+
+	// Change the perspective 
 	public void ChangePerspective() {
 		isUpDown = !isUpDown;
 
 		if (isUpDown) {
 			SwitchCamera(6);
+			cameras[6].transform.eulerAngles = new Vector3(90.0f, 60.0f * currPlayer, 0.0f);
 		}
 		else {
 			SwitchCamera(currPlayer);
 		}
+	}
+
+	// Setup the Game UI's
+	void GameStartUISetup() {
+		startPanel.enabled = false;
+		EntryEnable (false);
+		playerText.enabled = true;
+		playerText.GetComponentInChildren<Image> ().enabled = true;
+		timeText.enabled = true;
+		timeText.GetComponentInChildren<Image> ().enabled = true;
+		cameraToggle.enabled = true;
+		cameraToggle.GetComponentInChildren<Image> ().enabled = true;
+		cameraToggle.GetComponentInChildren<Text> ().enabled = true;
 	}
 }

@@ -17,31 +17,34 @@ public class Player : MonoBehaviour {
 	
 	void FixedUpdate ()
 	{
-		float moveHorizontal = Input.GetAxis ("Horizontal");
-		float moveVertical = Input.GetAxis ("Vertical");
-		float moveX = 0, moveZ = 0;
-		//print("X: " + moveX);
-		//print("Y: " + moveZ);
-
-		if (gameManager.currentCameraNum < 6) {
-			moveX = moveHorizontal * Mathf.Cos(gameManager.currentCameraNum * Mathf.PI / 3) 
-				+ moveVertical * Mathf.Sin(gameManager.currentCameraNum * Mathf.PI / 3);
-			moveZ = moveVertical * Mathf.Cos(gameManager.currentCameraNum * Mathf.PI / 3)
-				- moveHorizontal * Mathf.Sin(gameManager.currentCameraNum * Mathf.PI / 3);
+		if (gameManager.playerReset) {							// Reset the position of the player
+			rb.position = new Vector3(0.0f, 0.0f, 0.0f);
+			gameManager.playerReset = false;
 		}
+		else {										
+			float moveHorizontal = Input.GetAxis ("Horizontal");
+			float moveVertical = Input.GetAxis ("Vertical");
+			float moveX = 0, moveZ = 0;
 
-		//print("H:" + moveHorizontal);
-		//print("V:" + moveVertical);
+			// Change the position of the player according to the current player number
 
-		Vector3 movement = new Vector3 (moveX, 0.0f, moveZ) * speed;
+			if (gameManager.currentCameraNum < 6) {
+				moveX = moveHorizontal * Mathf.Cos(gameManager.currentCameraNum * Mathf.PI / 3) 
+					+ moveVertical * Mathf.Sin(gameManager.currentCameraNum * Mathf.PI / 3);
+				moveZ = moveVertical * Mathf.Cos(gameManager.currentCameraNum * Mathf.PI / 3)
+					- moveHorizontal * Mathf.Sin(gameManager.currentCameraNum * Mathf.PI / 3);
+			}
 
-		movement += rb.position;
+			Vector3 movement = new Vector3 (moveX, 0.0f, moveZ) * speed;
 
-		if (movement.magnitude >= 8.0f) {
-			movement.Normalize();
-			movement *= 8;
+			movement += rb.position;
+
+			if (movement.magnitude >= 8.0f) {
+				movement.Normalize();
+				movement *= 8;
+			}
+
+			rb.position = movement;
 		}
-
-		rb.position = movement;
 	}
 }

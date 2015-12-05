@@ -73,17 +73,34 @@ public class Board : MonoBehaviour {
 	}
 
 	//when a hoodle is chosen, it uses this method to send request to the board for changing the currHoodle to itself
-	public bool UpdateCurrHoodle(HoodleMove newCurr) {
+	public bool UpdateCurrHoodle(HoodleMove newCurr, bool isTheFirstTry) {
 		if (newCurr.tag.ToString() == colorList [currPlayer]) {
 			if (currHoodle != null && newCurr != null)
 				currHoodle.ResumeState ();
-			currHoodle = newCurr;
+
 			TurnOffAllPoss ();
-			if (currHoodle != null) {
-				//search for all reachable cells
-				SearchMovable (currHoodle.GetOnBoardPos ());
+
+			if (!gameManager.maniaMode && !isTheFirstTry) {		// If in normal mode & not the first try
+				if (currHoodle.GetOnBoardPos()[0] == gameManager.theFirstHoodleCoordinateX
+				    && currHoodle.GetOnBoardPos()[1] == gameManager.theFirstHoodleCoordinateY) { // Check undos
+					gameManager.isTheFirstTry = true;
+					gameManager.theFirstHoodleCoordinateX = -1;
+					gameManager.theFirstHoodleCoordinateY = -1;
+					return false;
+				}
+				if (currHoodle == newCurr) {	// Check confirms
+					gameManager.nextPlayer();
+					return false;
+				}
 			}
-			return true;
+			else {
+				currHoodle = newCurr;
+				if (currHoodle != null) {
+					//search for all reachable cells
+					SearchMovable (currHoodle.GetOnBoardPos(), isTheFirstTry);
+				}
+				return true;
+			}
 		}
 		return false;
 	}
@@ -149,8 +166,13 @@ public class Board : MonoBehaviour {
 			TurnOffAllPoss();
 			currHoodle.NotifyMove();
 			currHoodle.ResumeState();
-			currHoodle = null;
 
+			if (gameManager.maniaMode) {
+				currHoodle = null;
+			}
+			else {	// If in normal mode, only search for jump choices
+				SearchMovable (currHoodle.GetOnBoardPos(), false);
+			}
 			//check for time mode
 			//UpdateGameMode(row, col);
 		}
@@ -189,7 +211,9 @@ public class Board : MonoBehaviour {
 			int[] tmp = new int[2]{root[0]+dir[0], root[1]+dir[1]};
 			if (!arrivableList.Contains(tmp)){
 				arrivableList.Enqueue(tmp);
-				searchQueue.Enqueue(tmp);
+				if (gameManager.maniaMode) {
+					searchQueue.Enqueue(tmp);
+				}
 			}
 
 		}
@@ -214,27 +238,24 @@ public class Board : MonoBehaviour {
 	}
 
 	//search all the valid destination cells of currHoodle
-	void SearchMovable(int[] hoodleCoord) {
+	void SearchMovable(int[] hoodleCoord, bool isTheFirstTry) {
 		Queue searchQueue = new Queue ();
 		int[] root;
 		searchQueue.Enqueue (hoodleCoord);
 		bool[,] possState = new bool[17, 17];
 
 		for (int i = 0; i < 17; ++i)
-			for (int j = 0; j < 17; ++j)
-				possState [i, j] = false;
-
-		for (int i = 0; i < 17; ++i)
 			for (int j = 0; j < 17; ++j) {
-			if(boardCells[i,j] != null)
-				boardCells [i, j].bounceQueue.Clear ();
+				possState [i, j] = false;
+				if(boardCells[i,j] != null)
+					boardCells [i, j].bounceQueue.Clear ();
 			}
 
 		boardCells[hoodleCoord[0], hoodleCoord[1]].cellOccupied = false;
 		while (searchQueue.Count != 0) {
 			root = (int[])searchQueue.Dequeue ();
 			if(!gameManager.flyMode) {
-				print ("Normal Search");
+				//print ("Normal Search");
 				for (int i = 0; i < 6; ++i)
 					SearchJumpDirection (root, jumpDirections [0][i], ref possState, ref searchQueue);
 			}
@@ -246,8 +267,25 @@ public class Board : MonoBehaviour {
 		}
 		boardCells[hoodleCoord[0], hoodleCoord[1]].cellOccupied = true;
 
-		for (int i = 0; i < 6; ++i) {
-			SearchMoveDirection (hoodleCoord, moveDirections [i]);
+		if (isTheFirstTry) { 		// Only consider moves if this is the first 'move'
+			for (int i = 0; i < 6; ++i) {
+				SearchMoveDirection (hoodleCoord, moveDirections [i]);
+			}
+		}
+		else {						// Needs to add the last pos to undo
+			if (!gameManager.maniaMode) {
+				boardCells[gameManager.theFirstHoodleCoordinateX, 
+				           gameManager.theFirstHoodleCoordinateY].bounceQueue = new Queue();
+				boardCells[gameManager.theFirstHoodleCoordinateX, 
+				           gameManager.theFirstHoodleCoordinateY].bounceQueue.Enqueue
+					(
+						new int[2]{gameManager.theFirstHoodleCoordinateX, gameManager.theFirstHoodleCoordinateY}
+					);
+				arrivableList.Enqueue
+					(
+						new int[2]{gameManager.theFirstHoodleCoordinateX, gameManager.theFirstHoodleCoordinateY}
+					);
+			}
 		}
 
 		while (arrivableList.Count > 0) {

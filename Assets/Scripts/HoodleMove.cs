@@ -43,16 +43,26 @@ public class HoodleMove : MonoBehaviour {
 				TurnOffHighLight();
 				rigidBody.AddForce (CalcForce(destPos));
 			}
-			else if(locker) {//finish jumping, next player
-				gameManager.nextPlayer ();
-				locker = false;
+			else if(gameManager.maniaMode) {//finish jumping, next player
+				if (locker) {
+					gameManager.nextPlayer ();
+					locker = false;
+				}
 			}
+			else {
+				// If in normal mode, jumps can happen multiple times
+			};
 			pendingCollision = 0;
 		}
 	}
 
 	void OnMouseDown() {//when chosen, highlight
-		if (playBoard.UpdateCurrHoodle (this)) {
+		if (playBoard.UpdateCurrHoodle (this, gameManager.isTheFirstTry)) {
+			if (gameManager.isTheFirstTry == true) {	// If it's the first try, change the status
+				gameManager.isTheFirstTry = false;
+				gameManager.theFirstHoodleCoordinateX = this.GetOnBoardPos()[0];
+				gameManager.theFirstHoodleCoordinateY = this.GetOnBoardPos()[1];
+			}
 			TurnOnHighLight();
 		}
 	}
