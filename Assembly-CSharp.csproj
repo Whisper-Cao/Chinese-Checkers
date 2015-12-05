@@ -6,7 +6,7 @@
 	<ProductVersion>10.0.20506</ProductVersion>
 	<SchemaVersion>2.0</SchemaVersion>
 	<RootNamespace></RootNamespace>
-	<ProjectGuid>{A2DBAFC0-487A-C86C-F4B1-9666F2222FB1}</ProjectGuid>
+	<ProjectGuid>{803B4ADD-EF50-B81D-1FD2-52B88BE607AD}</ProjectGuid>
 	<OutputType>Library</OutputType>
 	<AppDesignerFolder>Properties</AppDesignerFolder>
 	<AssemblyName>Assembly-CSharp</AssemblyName>
@@ -52,21 +52,16 @@
      <Compile Include="Assets\codes\HoodleMove.cs" />
      <Compile Include="Assets\codes\PickUpRotate.cs" />
      <Compile Include="Assets\codes\Player.cs" />
+     <Compile Include="Assets\codes\Server.cs" />
      <None Include="Assets\shader\glass.shader" />
      <None Include="Assets\shader\hoodle_shader.shader" />
      <None Include="Assets\shader\mirrorReflection.shader" />
      <None Include="Assets\shader\walterBlur.shader" />
- <Reference Include="UnityEngine.Analytics">
- <HintPath>/Applications/Unity/Unity.app/Contents/UnityExtensions/Unity/UnityAnalytics/UnityEngine.Analytics.dll</HintPath>
- </Reference>
  <Reference Include="UnityEngine.Networking">
  <HintPath>/Applications/Unity/Unity.app/Contents/UnityExtensions/Unity/Networking/UnityEngine.Networking.dll</HintPath>
  </Reference>
  <Reference Include="UnityEngine.UI">
  <HintPath>/Applications/Unity/Unity.app/Contents/UnityExtensions/Unity/GUISystem/UnityEngine.UI.dll</HintPath>
- </Reference>
- <Reference Include="UnityEngine.Advertisements">
- <HintPath>/Applications/Unity/Unity.app/Contents/UnityExtensions/Unity/Advertisements/UnityEngine.Advertisements.dll</HintPath>
  </Reference>
  <Reference Include="UnityEditor.iOS.Extensions.Xcode">
  <HintPath>/Applications/Unity/Unity.app/Contents/PlaybackEngines/iOSSupport/UnityEditor.iOS.Extensions.Xcode.dll</HintPath>

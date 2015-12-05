@@ -22,6 +22,10 @@ public class Board : MonoBehaviour {
 	//whether the game mode is initialized
 	private bool gameModeInitialized;
 
+	private Server server;
+
+	private bool self = false;
+
 	//Data structure for each board cell.
 	private class BoardCell {
 		public bool cellOccupied = false;
@@ -69,6 +73,7 @@ public class Board : MonoBehaviour {
 		arrivableList = new Queue ();
 		lightOnList = new Queue ();
 		gameManager = GameObject.FindGameObjectWithTag ("PlayBoard").GetComponent<GameManager> ();
+		server = GameObject.FindGameObjectWithTag ("Server").GetComponent<Server> ();
 		//playerCamera = GameObject.Find ("Main Camera").GetComponent<Camera> ();
 		gameModeInitialized = false;
 	}
@@ -333,13 +338,23 @@ public class Board : MonoBehaviour {
 				if (i<8) j = (int)Random.Range(4,i+5);
 				else j = (int)Random.Range(i-4,13);
 				if (boardCells [i, j] != null && !boardCells [i, j].cellOccupied && boardCells [i, j].withPickUps == -1) {
+					self = true;
 					Vector3 pos = new Vector3 (boardCells [i, j].cellPos.x, 10, boardCells [i, j].cellPos.y);
-					gameManager.SetObstaclePos(pos);
+					gameManager.SetObstaclePos(pos, i, j);
 					boardCells [i, j].cellOccupied = true;
 					break;
 				}
 			}
 		}
+	}
+
+	public void CellActOnNetwork(string action) {
+		for (int i= 0; i < 17; ++i)
+			for (int j = 0; j < 17; ++j) {
+			if(boardCells[i,j] != null) 
+				//server.sendMove(action);
+				boardCells [i, j].lightManager.ReactOnNetwork (action);
+			}
 	}
 }
 

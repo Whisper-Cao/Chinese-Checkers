@@ -21,6 +21,8 @@ public class GameManager : MonoBehaviour {
 
 	private string[] playerList = {"Orange", "Green", "Blue", "Red", "Yellow", "Purple"};
 
+	private int[] playerNumList = new int[6];
+
 	private bool locker;//lock the timer
 
 	//UI for choosing game mode
@@ -32,21 +34,18 @@ public class GameManager : MonoBehaviour {
 	private Image startPanel;
 
 	//arrays keeping the same color of hoodles
-	private GameObject[] orangeHoodles;
-	private GameObject[] redHoodles;
-	private GameObject[] blueHoodles;
-	private GameObject[] greenHoodles;
-	private GameObject[] purpleHoodles;
-	private GameObject[] yellowHoodles;
+
+	private GameObject[][] hooldeList = new GameObject[6][];
 
 	//arrays for pickups for game mode
 	private GameObject[] pickUp; //time mode
 	private GameObject[] obstacle; //obstacle mode
 
-	private int mode;//the number of players
+	public int mode = 0;//the number of players
 
 	public int timeInterval;
 	private int[] playerTimeInterval;//every player have different timeInterval
+	private Server server;
 
 	//game modes
 	public bool timeMode;
@@ -73,6 +72,7 @@ public class GameManager : MonoBehaviour {
 		twoPlayerButton = GameObject.FindGameObjectWithTag ("2PlayerButton").GetComponent<Button> ();
 		threePlayerButton = GameObject.FindGameObjectWithTag ("3PlayerButton").GetComponent<Button> ();
 		sixPlayerButton = GameObject.FindGameObjectWithTag ("6PlayerButton").GetComponent<Button> ();
+		server = GameObject.FindGameObjectWithTag ("Server").GetComponent<Server> ();
 		EntryEnable (false);
 
 		gameModeToggle = new Toggle[4];
@@ -108,15 +108,11 @@ public class GameManager : MonoBehaviour {
 				--timer;
 				timeText.text = (timer / 60 + 1).ToString ();
 				if (timer == 0) {//if time out, next player
-					if(mode == 2)
-						currPlayer = (currPlayer + 3) % 6;
-					else if(mode == 3)
-						currPlayer = (currPlayer + 2) % 6;
-					else if(mode == 6)
-						currPlayer = (currPlayer + 1) % 6;
-					timer =  playerTimeInterval[currPlayer] * 60;
-					playerText.text = playerList [currPlayer];
-					board.SetPlayer (currPlayer);
+					server.sendMove("timeout");
+					currPlayer = (currPlayer + 1) % mode;
+					timer =  playerTimeInterval[playerNumList[currPlayer]] * 60;
+					playerText.text = playerList [playerNumList[currPlayer]];
+					board.SetPlayer (playerNumList[currPlayer]);
 				}
 			} else 
 				timeText.text = "Jumping";
@@ -125,17 +121,13 @@ public class GameManager : MonoBehaviour {
 
 	//after a hoodle reach its destination, it will call this method to allow the next player to continue
 	public void nextPlayer() {
+		server.sendMove("nextplayer");
 		if (currPlayer != 6) {
-			if(mode == 2)
-				currPlayer = (currPlayer + 3) % 6;
-			else if(mode == 3)
-				currPlayer = (currPlayer + 2) % 6;
-			else if(mode == 6)
-				currPlayer = (currPlayer + 1) % 6;
-			playerText.text = playerList [currPlayer];
-			timer = playerTimeInterval[currPlayer] * 60;
+			currPlayer = (currPlayer + 1) % mode;
+			playerText.text = playerList [playerNumList[currPlayer]];
+			timer = playerTimeInterval[playerNumList[currPlayer]] * 60;
 			timeText.text = (timer / 60 + 1).ToString ();
-			board.SetPlayer (currPlayer);
+			board.SetPlayer (playerNumList[currPlayer]);
 			locker = false;
 		}
 	}
@@ -155,8 +147,36 @@ public class GameManager : MonoBehaviour {
 		locker = true;
 	}
 
+	public void GameStart(string action) {
+		
+		startPanel.enabled = false;
+		EntryEnable (false);
+		playerText.enabled = true;
+		playerText.GetComponentInChildren<Image> ().enabled = true;
+		timeText.enabled = true;
+		timeText.GetComponentInChildren<Image> ().enabled = true;
+		
+		string [] actionParam = action.Split(' ');
+		for (int i = 1; i < 7; ++i) {
+			if(actionParam[i] == "0")
+				hooldeList[i - 1] = null;
+			else {
+				playerNumList[mode++] = i - 1;
+				for(int j = 0; j < hooldeList[i - 1].Length; ++j) {
+					hooldeList[i - 1][j].SetActive(true);
+					hooldeList[i - 1][j].GetComponent<HoodleMove>().AllowOccupy();
+				}
+			}
+		}
+		
+		currPlayer = 0;
+		board.SetPlayer (playerNumList[currPlayer]);
+		locker = false;
+	}
+
 	//start a two player game
-	public void TwoPlayerGameStart() {
+	/*public void TwoPlayerGameStart() {
+
 		startPanel.enabled = false;
 		EntryEnable (false);
 		playerText.enabled = true;
@@ -174,6 +194,14 @@ public class GameManager : MonoBehaviour {
 			redHoodles[i].GetComponent<HoodleMove> ().AllowOccupy();
 		}
 
+		yellowHoodles = null;
+
+		blueHoodles = null;
+
+		greenHoodles = null;
+
+		purpleHoodles = null;
+
 		currPlayer = 0;
 		board.SetPlayer (currPlayer);
 		locker = false;
@@ -182,6 +210,7 @@ public class GameManager : MonoBehaviour {
 
 	//start a three player game
 	public void ThreePlayersGameStart() {
+
 		startPanel.enabled = false;
 		EntryEnable (false);
 		playerText.enabled = true;
@@ -202,18 +231,12 @@ public class GameManager : MonoBehaviour {
 			yellowHoodles [i].SetActive (true);
 			yellowHoodles[i].GetComponent<HoodleMove>().AllowOccupy();
 		}
-		for (int i = 0; i < greenHoodles.Length; ++i) {
-			yellowHoodles [i].SetActive (true);
-			yellowHoodles[i].GetComponent<HoodleMove>().AllowOccupy();
-		}
-		for (int i = 0; i < redHoodles.Length; ++i) {
-			yellowHoodles [i].SetActive (true);
-			yellowHoodles[i].GetComponent<HoodleMove>().AllowOccupy();
-		}
-		for (int i = 0; i < purpleHoodles.Length; ++i) {
-			yellowHoodles [i].SetActive (true);
-			yellowHoodles[i].GetComponent<HoodleMove>().AllowOccupy();
-		}
+
+		redHoodles = null;
+
+		greenHoodles = null;
+
+		purpleHoodles = null;
 
 		currPlayer = 0;
 		board.SetPlayer (currPlayer);
@@ -222,6 +245,7 @@ public class GameManager : MonoBehaviour {
 	}
 
 	public void SixPlayersGameStart() {
+
 		startPanel.enabled = false;
 		EntryEnable (false);
 		playerText.enabled = true;
@@ -259,7 +283,7 @@ public class GameManager : MonoBehaviour {
 		board.SetPlayer (currPlayer);
 		locker = false;
 		mode = 6;
-	}
+	}*/
 
 	//select time game mode
 	public void GameModeTime(){
@@ -291,6 +315,7 @@ public class GameManager : MonoBehaviour {
 				return -1;
 			}
 			if (pickUp [i].activeSelf==false){
+				server.sendMove ("pickup " + pos.x + " " + pos.y + " " + pos.z);
 				pickUp [i].SetActive (true);
 				pickUp [i].transform.position = pos;
 				return i;
@@ -300,20 +325,23 @@ public class GameManager : MonoBehaviour {
 	}
 	//set inactive pickUp
 	public void DelPickUp(int num){
+		server.sendMove ("delpickup " + num);
 		if (num < 0 || num >= pickUp.Length)
 			return;
 		pickUp [num].SetActive (false);
 	}
 	//change timeInterval
 	public void SetTimeInterval(int newTime){
-		playerTimeInterval[currPlayer] = newTime;
-		if (timer >  playerTimeInterval[currPlayer] * 60)
-			timer =  playerTimeInterval[currPlayer] * 60;
+		server.sendMove ("timeinterval " + newTime);
+		playerTimeInterval[playerNumList[currPlayer]] = newTime;
+		if (timer >  playerTimeInterval[playerNumList[currPlayer]] * 60)
+			timer =  playerTimeInterval[playerNumList[currPlayer]] * 60;
 	}
 	
 	//set active and set the position of obstacles
 	//return obstacle number
-	public int SetObstaclePos(Vector3 pos){
+	public int SetObstaclePos(Vector3 pos, int x, int y){
+		server.sendMove ("obstacle " + pos.x + " " + pos.y + " " + pos.z + " " + x + " " + y);
 		for (int i = 0; i<obstacle.Length; i++) {
 			if (obstacle [i].activeSelf==false){
 				obstacle [i].SetActive (true);
@@ -326,30 +354,30 @@ public class GameManager : MonoBehaviour {
 
 	//when start, disable all hoodles until a game mode is chosen
 	void DisableAllHoodles() {
-		blueHoodles = GameObject.FindGameObjectsWithTag("PlayerBlue"); 
-
-		for (int i = 0; i < blueHoodles.Length; ++i)
-			blueHoodles [i].SetActive (false);
-
-		orangeHoodles = GameObject.FindGameObjectsWithTag("PlayerOrange");
-		for (int i = 0; i < orangeHoodles.Length; ++i)
-			orangeHoodles [i].SetActive (false);
-
-		yellowHoodles = GameObject.FindGameObjectsWithTag("PlayerYellow");
-		for (int i = 0; i < yellowHoodles.Length; ++i)
-			yellowHoodles [i].SetActive (false);
-
-		redHoodles = GameObject.FindGameObjectsWithTag("PlayerRed");
-		for (int i = 0; i < redHoodles.Length; ++i)
-			redHoodles [i].SetActive (false);
-
-		greenHoodles = GameObject.FindGameObjectsWithTag("PlayerGreen");
-		for (int i = 0; i < greenHoodles.Length; ++i)
-			greenHoodles [i].SetActive (false);
-
-		purpleHoodles = GameObject.FindGameObjectsWithTag("PlayerPurple");
-		for (int i = 0; i < purpleHoodles.Length; ++i)
-			purpleHoodles [i].SetActive (false);
+		hooldeList[2] = GameObject.FindGameObjectsWithTag("PlayerBlue"); 
+		
+		for (int i = 0; i < hooldeList[2].Length; ++i)
+			hooldeList[2] [i].SetActive (false);
+		
+		hooldeList[0] = GameObject.FindGameObjectsWithTag("PlayerOrange");
+		for (int i = 0; i < hooldeList[0].Length; ++i)
+			hooldeList[0] [i].SetActive (false);
+		
+		hooldeList[4] = GameObject.FindGameObjectsWithTag("PlayerYellow");
+		for (int i = 0; i < hooldeList[4].Length; ++i)
+			hooldeList[4] [i].SetActive (false);
+		
+		hooldeList[3] = GameObject.FindGameObjectsWithTag("PlayerRed");
+		for (int i = 0; i < hooldeList[3].Length; ++i)
+			hooldeList[3] [i].SetActive (false);
+		
+		hooldeList[1] = GameObject.FindGameObjectsWithTag("PlayerGreen");
+		for (int i = 0; i < hooldeList[1].Length; ++i)
+			hooldeList[1] [i].SetActive (false);
+		
+		hooldeList[5] = GameObject.FindGameObjectsWithTag("PlayerPurple");
+		for (int i = 0; i < hooldeList[5].Length; ++i)
+			hooldeList[5] [i].SetActive (false);
 	}
 
 	//when start, disable all pickUps and obstacles until a game mode is chosen
@@ -386,5 +414,13 @@ public class GameManager : MonoBehaviour {
 		startButton.GetComponent<Image> ().enabled = false;
 		startButton.GetComponentInChildren<Text> ().enabled = false;
 		EntryEnable (true);
+	}
+
+	public void HoodleActOnNetwork(string action) {
+		for(int i = 0; i < 6; ++i)
+			if(hooldeList[i] != null)
+			for (int j = 0; j < hooldeList[i].Length; ++j) {
+				hooldeList[i] [j].GetComponent<HoodleMove>().ReactOnNetwork(action);
+			}
 	}
 }

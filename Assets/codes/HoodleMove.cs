@@ -13,6 +13,8 @@ public class HoodleMove : MonoBehaviour {
 	private int[] onBoardCoord = new int[2];//the row and col number of hoodle on board
 	private GameManager gameManager;
 	private bool locker = false;
+	private Server server;
+	private bool self = false;
 	public Queue moveQueue;
 
 	//initialization 
@@ -23,6 +25,7 @@ public class HoodleMove : MonoBehaviour {
 		hoodlePos = GetComponent<Transform> ();
 		playBoard = GameObject.FindGameObjectWithTag("HoldBoard").GetComponent<Board>();
 		gameManager = GameObject.FindGameObjectWithTag("PlayBoard").GetComponent<GameManager>();
+		server = GameObject.FindGameObjectWithTag ("Server").GetComponent<Server> ();
 	}
 
 	//initialization
@@ -41,6 +44,7 @@ public class HoodleMove : MonoBehaviour {
 			if (moveQueue.Count > 0) {//a collison occurs and there are still some steps to jump
 				destPos = (Vector3)moveQueue.Dequeue ();
 				TurnOffHighLight();
+
 				rigidBody.AddForce (CalcForce(destPos));
 			}
 			else if(locker) {//finish jumping, next player
@@ -53,6 +57,7 @@ public class HoodleMove : MonoBehaviour {
 
 	void OnMouseDown() {//when chosen, highlight
 		if (playBoard.UpdateCurrHoodle (this)) {
+			self = true;
 			TurnOnHighLight();
 		}
 	}
@@ -110,5 +115,15 @@ public class HoodleMove : MonoBehaviour {
 	void TurnOffHighLight() {
 		halo = GetComponent("Halo"); 
 		halo.GetType().GetProperty("enabled").SetValue(halo, false, null);
+	}
+
+	public void ReactOnNetwork(string action) {
+		string [] actionParam = action.Split (' ');
+		if (int.Parse (actionParam [1]) == onBoardCoord [0] && int.Parse (actionParam [2]) == onBoardCoord [1] && !self)
+		if (playBoard.UpdateCurrHoodle (this)) {
+			server.sendMove(action);
+			TurnOnHighLight();
+		}
+		self = false;
 	}
 }
