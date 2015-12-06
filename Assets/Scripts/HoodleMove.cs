@@ -36,7 +36,7 @@ public class HoodleMove : MonoBehaviour {
 		playBoard.Occupy (this);
 	}
 
-	void Update () {
+	/*void Update () {
 		if (pendingCollision == 1) {
 			if (moveQueue.Count > 0) {//a collison occurs and there are still some steps to jump
 				destPos = (Vector3)moveQueue.Dequeue ();
@@ -54,7 +54,7 @@ public class HoodleMove : MonoBehaviour {
 			};
 			pendingCollision = 0;
 		}
-	}
+	}*/
 
 	void OnMouseDown() {//when chosen, highlight
 		if (playBoard.UpdateCurrHoodle (this, gameManager.isTheFirstTry)) {
@@ -65,18 +65,41 @@ public class HoodleMove : MonoBehaviour {
 			}
 			TurnOnHighLight();
 		}
+		pendingCollision = 0;
 	}
 
 	public void ResumeState() {
 		TurnOffHighLight ();
 	}
 
-	public void NotifyMove() {//first move after a destination is chosen
-		destPos = (Vector3)moveQueue.Dequeue ();
-		TurnOffHighLight();
-		rigidBody.AddForce (CalcForce(destPos));
-		locker = true;
-		gameManager.hoodleReady ();
+	//move after a destination is chosen
+	public IEnumerator NotifyMove() {
+		while (moveQueue.Count > 0) {
+			destPos = (Vector3)moveQueue.Dequeue ();
+			TurnOffHighLight();
+			rigidBody.AddForce (CalcForce(destPos));
+			pendingCollision = 0;
+			locker = true;
+			gameManager.hoodleReady ();
+			//print("Notifymove before wait for jump");
+			yield return StartCoroutine(WaitForJumpReady());
+		}
+		if (gameManager.maniaMode) {
+			if (locker) {
+				//gameManager.nextPlayer();
+				locker = false;
+			}
+		}
+	}
+
+	private IEnumerator WaitForJumpReady()
+	{
+		while (pendingCollision == 0) {
+			//print("Jump not ready");
+			yield return null;
+		}
+		pendingCollision = 0;
+		//print("Jump ready");
 	}
 
 	public void SetCoordinate(int row, int col) {
@@ -110,6 +133,7 @@ public class HoodleMove : MonoBehaviour {
 		rigidBody.WakeUp();
 		SetPos(new Vector2(destPos.x, destPos.z));//rectify the deviation 
 		pendingCollision = 1;
+		//print("Collision");
 	}
 
 	void TurnOnHighLight() {

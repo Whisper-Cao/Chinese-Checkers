@@ -36,7 +36,8 @@ public class FloorLightController : MonoBehaviour {
 		Vector3 mousePos = TranslateMousePos (Input.mousePosition);
 		if ((new Vector2 (mousePos.x, mousePos.z) - new Vector2 (transform.position.x, transform.position.z)).magnitude < 0.4) {
 			if (lightOn) {
-				playBoard.LetMove (new Vector3 (transform.position.x, 0, transform.position.z), row, col);
+				//print("Let move");
+				StartCoroutine(playBoard.LetMove(new Vector3 (transform.position.x, 0, transform.position.z), row, col));
 			}
 		}
 	}

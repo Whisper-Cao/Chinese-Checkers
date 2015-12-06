@@ -3,7 +3,7 @@ using System.Collections;
 
 public class Board : MonoBehaviour {
 
-	private HoodleMove currHoodle;//current selected Hoodle
+	public HoodleMove currHoodle;//current selected Hoodle
 	//private Camera playerCamera;
 	private Queue arrivableList;//board Cells that can be reached by currHoodle
 	private Queue lightOnList;//all the light currently on
@@ -29,6 +29,9 @@ public class Board : MonoBehaviour {
 		public FloorLightController lightManager;//light in the cell
 		public Queue bounceQueue = new Queue();//keep the trace of how the cell is reached by currHoodle
 		public int occupyingPlayer = -1;//this cell is a opposite cell of occupyingPlayer
+
+		// If the destination is arrived via jumps(used for normal mode)
+		public bool isJumpDestination = false;
 	}
 
 	//When intialized, a floor light controller sends message to board about which board cell it is mounted. 
@@ -97,7 +100,7 @@ public class Board : MonoBehaviour {
 				currHoodle = newCurr;
 				if (currHoodle != null) {
 					//search for all reachable cells
-					SearchMovable (currHoodle.GetOnBoardPos(), isTheFirstTry);
+					SearchMovable (currHoodle.GetOnBoardPos(), isTheFirstTry, true);
 				}
 				return true;
 			}
@@ -142,7 +145,7 @@ public class Board : MonoBehaviour {
 	//when a lighting cell is clicked, it will use this method to allow the currHoodle jump to it
 	//destPos is the position of the chosen cell
 	//row and col are the coordiantes of chosen cell
-	public void LetMove(Vector3 destPos, int row, int col) {
+	public IEnumerator LetMove(Vector3 destPos, int row, int col) {
 		if (currHoodle != null) {
 			boardCells[(int)currHoodle.GetOnBoardPos()[0], (int)currHoodle.GetOnBoardPos()[1]].cellOccupied = false;
 			boardCells[row, col].cellOccupied = true;
@@ -164,17 +167,20 @@ public class Board : MonoBehaviour {
 				UpdateGameMode(nextPos[0], nextPos[1]);
 			}
 			TurnOffAllPoss();
-			currHoodle.NotifyMove();
+			//print("Before notify move");
+			yield return StartCoroutine(currHoodle.NotifyMove());
 			currHoodle.ResumeState();
 
 			if (gameManager.maniaMode) {
 				currHoodle = null;
+				gameManager.nextPlayer();
 			}
 			else {	// If in normal mode, only search for jump choices
-				SearchMovable (currHoodle.GetOnBoardPos(), false);
+				SearchMovable (currHoodle.GetOnBoardPos(), false, boardCells[row, col].isJumpDestination);
 			}
 			//check for time mode
 			//UpdateGameMode(row, col);
+			print("Let move quit");
 		}
 	}
 
@@ -208,6 +214,7 @@ public class Board : MonoBehaviour {
 			possState[root[0]+dir[0], root[1]+dir[1]] = true;
 			boardCells[root[0]+dir[0], root[1]+dir[1]].bounceQueue = (Queue)boardCells[root[0], root[1]].bounceQueue.Clone();
 			boardCells[root[0]+dir[0], root[1]+dir[1]].bounceQueue.Enqueue(new int[2]{root[0]+dir[0], root[1]+dir[1]});
+			boardCells[root[0]+dir[0], root[1]+dir[1]].isJumpDestination = true;
 			int[] tmp = new int[2]{root[0]+dir[0], root[1]+dir[1]};
 			if (!arrivableList.Contains(tmp)){
 				arrivableList.Enqueue(tmp);
@@ -230,15 +237,26 @@ public class Board : MonoBehaviour {
 
 		if(boardCells[(int)hoodleCoord[0] + dir[0], (int)hoodleCoord[1] + dir[1]] != null &&
 		   !boardCells[(int)hoodleCoord[0] + dir[0], (int)hoodleCoord[1] + dir[1]].cellOccupied &&
-		   boardCells[(int)hoodleCoord[0]+dir[0], (int)hoodleCoord[1] + dir[1]].lightManager != null) {
-			boardCells[(int)hoodleCoord[0]+dir[0], (int)hoodleCoord[1] + dir[1]].bounceQueue = new Queue();
-			boardCells[(int)hoodleCoord[0]+dir[0], (int)hoodleCoord[1]+ dir[1]].bounceQueue.Enqueue(new int[2]{hoodleCoord[0]+dir[0], hoodleCoord[1]+dir[1]});
-			arrivableList.Enqueue(new int[2]{hoodleCoord[0]+dir[0], hoodleCoord[1]+dir[1]});
+		   boardCells[(int)hoodleCoord[0] + dir[0], (int)hoodleCoord[1] + dir[1]].lightManager != null) {
+			boardCells[(int)hoodleCoord[0] + dir[0], 
+			           (int)hoodleCoord[1] + dir[1]].bounceQueue = new Queue();
+			boardCells[(int)hoodleCoord[0] + dir[0], 
+			           (int)hoodleCoord[1] + dir[1]].bounceQueue.Enqueue
+				(
+					new int[2]{hoodleCoord[0] + dir[0], hoodleCoord[1] + dir[1]}
+				);
+			boardCells[(int)hoodleCoord[0] + dir[0], 
+			           (int)hoodleCoord[1] + dir[1]].isJumpDestination = false;
+			arrivableList.Enqueue
+				(
+					new int[2] {hoodleCoord[0] + dir[0],
+					         hoodleCoord[1] + dir[1]}
+				);
 		}
 	}
 
 	//search all the valid destination cells of currHoodle
-	void SearchMovable(int[] hoodleCoord, bool isTheFirstTry) {
+	void SearchMovable(int[] hoodleCoord, bool isTheFirstTry, bool isJump) {
 		Queue searchQueue = new Queue ();
 		int[] root;
 		searchQueue.Enqueue (hoodleCoord);
@@ -247,23 +265,27 @@ public class Board : MonoBehaviour {
 		for (int i = 0; i < 17; ++i)
 			for (int j = 0; j < 17; ++j) {
 				possState [i, j] = false;
-				if(boardCells[i,j] != null)
+				if (boardCells[i,j] != null) {
 					boardCells [i, j].bounceQueue.Clear ();
+					boardCells[i, j].isJumpDestination = false;
+				}
 			}
 
 		boardCells[hoodleCoord[0], hoodleCoord[1]].cellOccupied = false;
-		while (searchQueue.Count != 0) {
-			root = (int[])searchQueue.Dequeue ();
-			if(!gameManager.flyMode) {
-				//print ("Normal Search");
-				for (int i = 0; i < 6; ++i)
-					SearchJumpDirection (root, jumpDirections [0][i], ref possState, ref searchQueue);
-			}
-			else 
-				for(int s = 0; s < 6; ++s)
-					for(int i = 0; i < 6; ++i) {
-						SearchJumpDirection(root, jumpDirections[s][i], ref possState, ref searchQueue);
+		if (isJump) {
+			while (searchQueue.Count != 0) {
+				root = (int[])searchQueue.Dequeue ();
+				if(!gameManager.flyMode) {
+					//print ("Normal Search");
+					for (int i = 0; i < 6; ++i)
+						SearchJumpDirection (root, jumpDirections [0][i], ref possState, ref searchQueue);
 				}
+				else 
+					for(int s = 0; s < 6; ++s)
+						for(int i = 0; i < 6; ++i) {
+							SearchJumpDirection(root, jumpDirections[s][i], ref possState, ref searchQueue);
+					}
+			}
 		}
 		boardCells[hoodleCoord[0], hoodleCoord[1]].cellOccupied = true;
 
@@ -281,6 +303,9 @@ public class Board : MonoBehaviour {
 					(
 						new int[2]{gameManager.theFirstHoodleCoordinateX, gameManager.theFirstHoodleCoordinateY}
 					);
+				boardCells[gameManager.theFirstHoodleCoordinateX, 
+				           gameManager.theFirstHoodleCoordinateY].isJumpDestination = false;
+
 				arrivableList.Enqueue
 					(
 						new int[2]{gameManager.theFirstHoodleCoordinateX, gameManager.theFirstHoodleCoordinateY}

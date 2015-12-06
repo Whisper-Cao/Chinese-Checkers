@@ -11,7 +11,7 @@ public class GameManager : MonoBehaviour {
 	public bool isUpDown;			//If the perspective is up-down
 	
 	private int currPlayer;//currPlayer number, 6 for no player
-	private int timer;
+	private float timer;
 	private Board board;
 
 	//display current player 
@@ -107,8 +107,8 @@ public class GameManager : MonoBehaviour {
 
 		startPanel = GameObject.FindGameObjectWithTag ("StartPanel").GetComponent<Image> ();
 		playerText.text = playerList[0];
-		timer = timeInterval * 60;
-		timeText.text = (timer/60+1).ToString ();
+		timer = timeInterval;
+		timeText.text = (Mathf.CeilToInt(timer)).ToString ();
 
 		board.SetPlayer (6);
 		currPlayer = 6;
@@ -136,9 +136,9 @@ public class GameManager : MonoBehaviour {
 	void Update () {
 		if (currPlayer != 6) { //if there's a current player
 			if (!locker) {
-				--timer;
-				timeText.text = (timer / 60 + 1).ToString ();
-				if (timer == 0) {//if time out, next player
+				timer -= Time.deltaTime;
+				timeText.text = (Mathf.CeilToInt(timer)).ToString ();
+				if (timer <= 0) {//if time out, next player
 					nextPlayer();
 				}
 			} else 
@@ -156,8 +156,8 @@ public class GameManager : MonoBehaviour {
 			else if(mode == 6)
 				currPlayer = (currPlayer + 1) % 6;
 			playerText.text = playerList [currPlayer];
-			timer = playerTimeInterval[currPlayer] * 60;
-			timeText.text = (timer / 60 + 1).ToString ();
+			timer = playerTimeInterval[currPlayer];
+			timeText.text = (Mathf.CeilToInt(timer)).ToString ();
 			board.SetPlayer (currPlayer);
 			locker = false;
 			if (!isUpDown) {						//Switch camera automatically
@@ -320,8 +320,8 @@ public class GameManager : MonoBehaviour {
 	//change timeInterval
 	public void SetTimeInterval(int newTime){
 		playerTimeInterval[currPlayer] = newTime;
-		if (timer >  playerTimeInterval[currPlayer] * 60)
-			timer =  playerTimeInterval[currPlayer] * 60;
+		if (timer >  playerTimeInterval[currPlayer])
+			timer =  playerTimeInterval[currPlayer];
 	}
 	
 	//set active and set the position of obstacles
