@@ -12,7 +12,7 @@ public class FloorLightController : MonoBehaviour {
 	public int row;
 	public int col;
 
-	void Awake() {
+	public void Initialize() {
 		playBoard = GameObject.FindGameObjectWithTag ("HoldBoard").GetComponent<Board> ();
 		playBoard.FixLight (this);//send its message to board
 		gameManager = GameObject.FindGameObjectWithTag ("PlayBoard").GetComponent<GameManager> ();

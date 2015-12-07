@@ -9,6 +9,7 @@ public class GameManager : MonoBehaviour {
 	public Camera currentCamera;
 	public int currentCameraNum;
 	public bool isUpDown;			//If the perspective is up-down
+	public Board playBoard;
 	
 	private int currPlayer;//currPlayer number, 6 for no player
 	private float timer;
@@ -66,6 +67,10 @@ public class GameManager : MonoBehaviour {
 	public bool isTheFirstTry;  //In normal mode, if the selection of one hoodle is the first try of the player
 	public int theFirstHoodleCoordinateX, theFirstHoodleCoordinateY; //The first-selected hoodle's coordinates
 
+	//for delay
+	private bool delayLock;
+	private float delayTimer;
+
 	void Start () {
 		locker = true;
 		board = GameObject.FindGameObjectWithTag ("HoldBoard").GetComponent<Board> ();
@@ -79,6 +84,7 @@ public class GameManager : MonoBehaviour {
 		cameraToggle.enabled = false;
 		cameraToggle.GetComponentInChildren<Image> ().enabled = false;
 		cameraToggle.GetComponentInChildren<Text>().enabled = false;
+		playBoard = GameObject.FindGameObjectWithTag("HoldBoard").GetComponent<Board>();
 
 		DisableAllHoodles ();
 		DisableAllExtraElements ();
@@ -130,6 +136,9 @@ public class GameManager : MonoBehaviour {
 		isTheFirstTry = true;
 		theFirstHoodleCoordinateX = -1;
 		theFirstHoodleCoordinateY = -1;
+		//for delay
+		delayLock = false;
+		delayTimer = 0.0f;
 	}
 
 	//decrease the timer every 60 frames if there is a player thinking
@@ -143,6 +152,15 @@ public class GameManager : MonoBehaviour {
 				}
 			} else 
 				timeText.text = "Jumping";
+		}
+		if (delayLock) {
+			delayTimer -= Time.deltaTime;
+			if (delayTimer<=0){
+				delayLock = false;
+				locker = false;
+				winPanel.enabled = false;
+				winText.enabled = false;
+			}
 		}
 	}
 
@@ -171,6 +189,10 @@ public class GameManager : MonoBehaviour {
 			isTheFirstTry = true;					// Reset the first selected hoodle
 			theFirstHoodleCoordinateX = -1;
 			theFirstHoodleCoordinateY = -1;
+
+			if (timeMode) {
+				playBoard.TimeModeGenerate();
+			}
 		}
 	}
 
@@ -185,6 +207,7 @@ public class GameManager : MonoBehaviour {
 	public void Win(string player) {
 		timeText.text = "Game over";
 		winPanel.enabled = true;
+		winText.enabled = true;
 		winText.text = player + " win!";
 		board.SetPlayer (6);
 		currPlayer = 6;
@@ -306,6 +329,9 @@ public class GameManager : MonoBehaviour {
 			if (pickUp [i].activeSelf==false){
 				pickUp [i].SetActive (true);
 				pickUp [i].transform.position = pos;
+				pickUp [i].GetComponent<PickUpRotate>().Reset();
+				BoxCollider bc = pickUp [i].GetComponent<BoxCollider>();
+				bc.enabled = false;
 				return i;
 			}
 		}
@@ -317,11 +343,27 @@ public class GameManager : MonoBehaviour {
 			return;
 		pickUp [num].SetActive (false);
 	}
+
+	//Enable PickUp Collider
+	public void EnablePickUpCollider(int num){
+		if (num < 0 || num >= pickUp.Length)
+			return;
+		BoxCollider bc = pickUp [num].GetComponent<BoxCollider>();
+		bc.enabled = true;
+	}
+
 	//change timeInterval
 	public void SetTimeInterval(int newTime){
 		playerTimeInterval[currPlayer] = newTime;
 		if (timer >  playerTimeInterval[currPlayer])
 			timer =  playerTimeInterval[currPlayer];
+		locker = true;
+		winPanel.enabled = true;
+		winText.enabled = true;
+		winText.text = playerList[currPlayer] + " Time Set: " + newTime;
+		//here needs delayQAQ
+		delayLock = true;
+		delayTimer = 1.5f;
 	}
 	
 	//set active and set the position of obstacles
@@ -439,5 +481,10 @@ public class GameManager : MonoBehaviour {
 		cameraToggle.enabled = true;
 		cameraToggle.GetComponentInChildren<Image> ().enabled = true;
 		cameraToggle.GetComponentInChildren<Text> ().enabled = true;
+
+		print("before");
+		playBoard.TimeModeGenerate();
+		playBoard.ObstacleModeUpdate();
+
 	}
 }

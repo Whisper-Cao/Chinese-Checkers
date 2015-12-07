@@ -18,8 +18,7 @@ public class Board : MonoBehaviour {
 	private int[][] moveDirections = new int[6][];
 	//numbers of hoodles already in the opposite section
 	private int[] arrivalCounters = new int[6];
-	//whether the game mode is initialized
-	private bool gameModeInitialized;
+	private GameObject[] lights;
 
 	//Data structure for each board cell.
 	private class BoardCell {
@@ -72,7 +71,12 @@ public class Board : MonoBehaviour {
 		lightOnList = new Queue ();
 		gameManager = GameObject.FindGameObjectWithTag ("PlayBoard").GetComponent<GameManager> ();
 		//playerCamera = GameObject.Find ("Main Camera").GetComponent<Camera> ();
-		gameModeInitialized = false;
+
+		lights = GameObject.FindGameObjectsWithTag("HighLight");
+		for (int i=0;i<lights.Length;i++){
+			lights[i].GetComponent<FloorLightController>().Initialize();
+		}
+
 	}
 
 	//when a hoodle is chosen, it uses this method to send request to the board for changing the currHoodle to itself
@@ -164,7 +168,7 @@ public class Board : MonoBehaviour {
 				Vector2 twodPos = boardCells[nextPos[0], nextPos[1]].cellPos;
 				currHoodle.moveQueue.Enqueue(new Vector3(twodPos.x, 0, twodPos.y));
 				//check for time mode
-				UpdateGameMode(nextPos[0], nextPos[1]);
+				TimeModeUpdate(nextPos[0], nextPos[1]);
 			}
 			TurnOffAllPoss();
 			//print("Before notify move");
@@ -180,6 +184,7 @@ public class Board : MonoBehaviour {
 			}
 			//check for time mode
 			//UpdateGameMode(row, col);
+
 			print("Let move quit");
 		}
 	}
@@ -352,27 +357,31 @@ public class Board : MonoBehaviour {
 
 
 	//Update for different game modes
-	public void UpdateGameMode(int row, int col){
+	/*public void UpdateGameMode(int row, int col){
 		//for different game modes
 		if (gameManager.timeMode)
 			TimeModeUpdate (row, col);
 		if (gameManager.obstacleMode && !gameModeInitialized)
 			ObstacleModeUpdate ();
-	}
+	}*/
 
-	void TimeModeUpdate(int row, int col){
+	public void TimeModeUpdate(int row, int col){
 		//delete pickUps
-		if (boardCells [row, col].withPickUps > -1) {
-			gameManager.DelPickUp(boardCells [row, col].withPickUps);
-			boardCells [row, col].withPickUps = -1;
-			int tmp = (int)Random.Range(5,15);
-			gameManager.SetTimeInterval(tmp);
+		if (gameManager.timeMode) {
+			if (boardCells [row, col].withPickUps > -1) {
+				gameManager.EnablePickUpCollider(boardCells [row, col].withPickUps);
+				boardCells [row, col].withPickUps = -1;
+			}
 		}
 
+	}
+
+	public void TimeModeGenerate() {
 		//add more pickUps
 		//only try 10 time, if still fails, the give up
 		for (int k=0;k<10;k++) {
 			//generate at white space
+			if (!gameManager.timeMode) return;
 			int i = (int)Random.Range(4,13);
 			int j = 0;
 			if (i<8) j = (int)Random.Range(4,i+5);
@@ -385,8 +394,9 @@ public class Board : MonoBehaviour {
 		}
 	}
 
-	void ObstacleModeUpdate(){
-		gameModeInitialized = true;
+	public void ObstacleModeUpdate(){
+		if (!gameManager.obstacleMode) return;
+		print("O");
 		int num = (int)Random.Range (2, 6);
 		for (int k=0; k<num; k++) {
 			for (int kk=0;kk<10;kk++) {
@@ -399,6 +409,7 @@ public class Board : MonoBehaviour {
 					Vector3 pos = new Vector3 (boardCells [i, j].cellPos.x, 0, boardCells [i, j].cellPos.y);
 					gameManager.SetObstaclePos(pos);
 					boardCells [i, j].cellOccupied = true;
+
 					break;
 				}
 			}
