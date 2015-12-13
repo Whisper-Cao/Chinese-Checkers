@@ -4,6 +4,7 @@ using System.Collections;
 public class FloorLightController : MonoBehaviour {
 	
 	private Component halo;
+	private Component particle;
 	private Camera playerCamera;
 	private Board playBoard;
 	private bool lightOn = false;
@@ -47,6 +48,9 @@ public class FloorLightController : MonoBehaviour {
 		if (gameManager.hintMode) {
 			halo = GetComponent ("Halo"); 
 			halo.GetType ().GetProperty ("enabled").SetValue (halo, true, null);
+			particle = GetComponentInChildren<ParticleRenderer>();
+			if (particle!=null)
+				particle.GetType ().GetProperty ("enabled").SetValue (particle, true, null);
 		}
 		lightOn = true;
 	}
@@ -55,6 +59,9 @@ public class FloorLightController : MonoBehaviour {
 	public void TurnOffHighLight() {
 		halo = GetComponent("Halo"); 
 		halo.GetType().GetProperty("enabled").SetValue(halo, false, null);
+		particle = GetComponentInChildren<ParticleRenderer>();;
+		if (particle!=null)
+			particle.GetType ().GetProperty ("enabled").SetValue (particle, false, null);
 		lightOn = false;
 	}
 }
