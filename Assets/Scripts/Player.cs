@@ -5,34 +5,36 @@ using System.Collections;
 public class Player : MonoBehaviour {
 	
 	public float speed;
+	public bool isCurrentPlayer;
+	public int playerNumber;
 	
 	private Rigidbody rb;
-	private GameManager gameManager;
+
+	public void ResetPosition()
+	{
+		rb.position = new Vector3(0.0f, 0.0f, 0.0f);
+	}
 	
 	void Start ()
 	{
 		rb = GetComponent<Rigidbody>();
-		gameManager = GameObject.FindGameObjectWithTag ("PlayBoard").GetComponent<GameManager> ();
 	}
 	
 	void FixedUpdate ()
 	{
-		if (gameManager.playerReset) {							// Reset the position of the player
-			rb.position = new Vector3(0.0f, 0.0f, 0.0f);
-			gameManager.playerReset = false;
-		}
-		else {										
+		if (isCurrentPlayer) {
+
 			float moveHorizontal = Input.GetAxis ("Horizontal");
 			float moveVertical = Input.GetAxis ("Vertical");
 			float moveX = 0, moveZ = 0;
 
 			// Change the position of the player according to the current player number
 
-			if (gameManager.currentCameraNum < 6) {
-				moveX = moveHorizontal * Mathf.Cos(gameManager.currentCameraNum * Mathf.PI / 3) 
-					+ moveVertical * Mathf.Sin(gameManager.currentCameraNum * Mathf.PI / 3);
-				moveZ = moveVertical * Mathf.Cos(gameManager.currentCameraNum * Mathf.PI / 3)
-					- moveHorizontal * Mathf.Sin(gameManager.currentCameraNum * Mathf.PI / 3);
+			if (playerNumber < 6) {
+				moveX = moveHorizontal * Mathf.Cos(playerNumber * Mathf.PI / 3) 
+					+ moveVertical * Mathf.Sin(playerNumber * Mathf.PI / 3);
+				moveZ = moveVertical * Mathf.Cos(playerNumber * Mathf.PI / 3)
+					- moveHorizontal * Mathf.Sin(playerNumber * Mathf.PI / 3);
 			}
 
 			Vector3 movement = new Vector3 (moveX, 0.0f, moveZ) * speed;
@@ -45,6 +47,7 @@ public class Player : MonoBehaviour {
 			}
 
 			rb.position = movement;
+		
 		}
 	}
 }
