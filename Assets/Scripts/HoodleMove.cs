@@ -87,6 +87,10 @@ public class HoodleMove : MonoBehaviour
             gameManager.hoodleReady();
             //print("Notifymove before wait for jump");
             yield return StartCoroutine(WaitForJumpReady());
+            AudioSource AS = GameObject.FindGameObjectWithTag("BallTouchSoundEffect").GetComponent<AudioSource>();
+            if (AS != null) {
+                AS.Play();
+            }
         }
         gameManager.finished = true;
         if (gameManager.maniaMode) {

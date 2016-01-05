@@ -12,7 +12,7 @@ public class Board : MonoBehaviour
     private BoardCell[,] boardCells = new BoardCell[17, 17];//all board cells
  
     //6 jump directions
-    private int[][][] jumpDirections = new int[6][][];
+    private int[][][] jumpDirections = new int[7][][];
     //6 move directions
     private int[][] walkDirections = new int[6][];
     //numbers of hoodles already in the opposite section
@@ -45,7 +45,7 @@ public class Board : MonoBehaviour
     void Start()
     {
         //initialize search directions
-        for (int i = 0; i < 6; ++i) {
+        for (int i = 0; i < 7; ++i) {
             jumpDirections[i] = new int[6][];
             for (int j = 0; j < 6; ++j)
                 jumpDirections[i][j] = new int[2];
@@ -59,7 +59,7 @@ public class Board : MonoBehaviour
             walkDirections[i][1] = jumpDirections[0][i][1] / 2;
         }
 
-        for (int s = 1; s < 6; ++s) {
+        for (int s = 1; s < 7; ++s) {
             for (int i = 0; i < 6; ++i) {
                 jumpDirections[s][i][0] = (5 - i) / 3 * ((i + 1) % 2) * s * 2 + (i / 3) * (i % 2) * -2 * s;
                 jumpDirections[s][i][1] = (5 - i) / 3 * ((i + 1) / 2) * s * 2 + (i / 3) * (i / 4) * -2 * s;
@@ -291,7 +291,7 @@ public class Board : MonoBehaviour
                     for (int i = 0; i < 6; ++i)
                         SearchJumpDirection(root, jumpDirections[0][i], ref possState, ref searchQueue);
                 } else
-                    for (int s = 0; s < 6; ++s)
+                    for (int s = 0; s < 7; ++s)
                         for (int i = 0; i < 6; ++i) {
                             SearchJumpDirection(root, jumpDirections[s][i], ref possState, ref searchQueue);
                         }

@@ -24,10 +24,12 @@ public class PlayerManager :PlayerAbstract
 	public void ChangePerspective()
 	{
 		cameras[currentCameraNum].GetComponent<Camera>().enabled = false;
+        currentCamera.GetComponent<AudioListener>().enabled = false;
 
 		currentCameraNum = 1 - currentCameraNum;
 		currentCamera = cameras[currentCameraNum].GetComponent<Camera>();
 		currentCamera.enabled = true;
+        currentCamera.GetComponent<AudioListener>().enabled = true;
         gameManager.currentCamera = currentCamera;
 	}
 
@@ -46,6 +48,7 @@ public class PlayerManager :PlayerAbstract
         }
 
 		currentCamera.enabled = flag;
+        currentCamera.GetComponent<AudioListener>().enabled = flag;
         if (flag) {
             gameManager.currentCamera = currentCamera;
         }

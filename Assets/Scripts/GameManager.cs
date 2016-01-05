@@ -32,8 +32,8 @@ public class GameManager : MonoBehaviour
     private Button sixPlayersButton;
     private Button startButton;
     private Toggle[] gameModeToggle;
+    private RawImage background;
     [HideInInspector] public Toggle cameraToggle;
-    private Image startPanel;
 
     //arrays keeping the same color of hoodles
     public GameObject[] allPlayers;
@@ -84,6 +84,7 @@ public class GameManager : MonoBehaviour
         cameraToggle.GetComponentInChildren<Image>().enabled = false;
         cameraToggle.GetComponentInChildren<Text>().enabled = false;
         board = GameObject.FindGameObjectWithTag("HoldBoard").GetComponent<Board>();
+        background = GameObject.FindGameObjectWithTag("Background").GetComponent<RawImage>();
 
         players = new PlayerAbstract[6];
         players[0] = orangePlayer = allPlayers[0].GetComponent<PlayerManager>();
@@ -102,6 +103,7 @@ public class GameManager : MonoBehaviour
 
         currentCamera = ((PlayerManager) orangePlayer).cameras[0].GetComponent<Camera>();
         currentCamera.enabled = true;
+        currentCamera.GetComponent<AudioListener>().enabled = true;
 
         DisableAllHoodles();
         DisableAllExtraElements();
@@ -129,7 +131,6 @@ public class GameManager : MonoBehaviour
 
         startButton = GameObject.FindGameObjectWithTag("StartButtonTag").GetComponent<Button>();
 
-        startPanel = GameObject.FindGameObjectWithTag("StartPanel").GetComponent<Image>();
         playerText.text = players[0].color;
         timer = timeInterval;
         timeText.text = (Mathf.CeilToInt(timer)).ToString();
@@ -173,12 +174,13 @@ public class GameManager : MonoBehaviour
         }
     }
 
+    
+
     IEnumerator WaitForFinish()
     {
         while (!finished) {
             yield return null;
         }
-        print("Next Player for " + currentPlayer);
         nextPlayer();
     }
 
@@ -205,6 +207,9 @@ public class GameManager : MonoBehaviour
             }
             playerText.text = players[currentPlayer].color;
             timer = playerTimeInterval[currentPlayer];
+            if (!maniaMode) {
+                timer += 5.0f;
+            }
             timeText.text = (Mathf.CeilToInt(timer)).ToString();
             board.ClearCurrentHoodle();
             locker = false;
@@ -239,55 +244,37 @@ public class GameManager : MonoBehaviour
     //start a two player game
     public void TwoPlayerGameStart()
     {
-        GameStartUISetup();
-
         //put the hoodles of orange and red players on the board
         orangePlayer.Initialize();
         redPlayer.Initialize();
 
-        currentPlayer = 0;
-        board.ClearCurrentHoodle();
-        players[currentPlayer].SetCurrent(true);
-        locker = false;
         playerNum = 2;
+        GameStart();
     }
 
     //start a three player game
     public void ThreePlayersGameStart()
     {
-        GameStartUISetup();
-
         orangePlayer.Initialize();
         bluePlayer.Initialize();
         yellowPlayer.Initialize();
-
-        currentPlayer = 0;
-        board.ClearCurrentHoodle();
-        players[currentPlayer].SetCurrent(true);
-        locker = false;
-        playerNum = 3;
+       
+        GameStart();
     }
 
     public void FourPlayersGameStart()
     {
-        GameStartUISetup();
-
         orangePlayer.Initialize();
         greenPlayer.Initialize();
         redPlayer.Initialize();
         yellowPlayer.Initialize();
 
-        currentPlayer = 0;
-        board.ClearCurrentHoodle();
-        players[currentPlayer].SetCurrent(true);
-        locker = false;
         playerNum = 4;
+        GameStart();
     }
 
     public void SixPlayersGameStart()
     {
-        GameStartUISetup();
-
         orangePlayer.Initialize();
         greenPlayer.Initialize();
         bluePlayer.Initialize();
@@ -295,11 +282,23 @@ public class GameManager : MonoBehaviour
         yellowPlayer.Initialize();
         purplePlayer.Initialize();
 
+        playerNum = 6;
+        GameStart();
+    }
+
+    void GameStart()
+    {
+        GameStartUISetup();
+
         currentPlayer = 0;
         board.ClearCurrentHoodle();
         players[currentPlayer].SetCurrent(true);
+        if (!maniaMode) {
+            timer += 5.0f;
+        }
         locker = false;
-        playerNum = 6;
+
+        background.enabled = false;
     }
 
     //select time game mode
@@ -379,12 +378,17 @@ public class GameManager : MonoBehaviour
     public void SetTimeInterval(int newTime)
     {
         playerTimeInterval[currentPlayer] = newTime;
-        if (timer > playerTimeInterval[currentPlayer])
-            timer = playerTimeInterval[currentPlayer];
+        if (maniaMode) {
+            if (timer > playerTimeInterval[currentPlayer])
+                timer = playerTimeInterval[currentPlayer];
+        } else {
+            if (timer > playerTimeInterval[currentPlayer] + 5)
+                timer = playerTimeInterval[currentPlayer] + 5;
+        }
         locker = true;
         winPanel.enabled = true;
         winText.enabled = true;
-        winText.text = players[currentPlayer].color + " Time Set: " + newTime;
+        winText.text = players[currentPlayer].color + " Time Set: " + (newTime + 5);
         delayLock = true;
         delayTimer = 1.5f;
     }
@@ -428,19 +432,19 @@ public class GameManager : MonoBehaviour
     void EntryEnable(bool enable)
     {
         twoPlayersButton.enabled = enable;
-        twoPlayersButton.GetComponent<Image>().enabled = enable;
+        twoPlayersButton.GetComponent<RawImage>().enabled = enable;
         twoPlayersButton.GetComponentInChildren<Text>().enabled = enable;
 
         threePlayersButton.enabled = enable;
-        threePlayersButton.GetComponent<Image>().enabled = enable;
+        threePlayersButton.GetComponent<RawImage>().enabled = enable;
         threePlayersButton.GetComponentInChildren<Text>().enabled = enable;
 
         fourPlayersButton.enabled = enable;
-        fourPlayersButton.GetComponent<Image>().enabled = enable;
+        fourPlayersButton.GetComponent<RawImage>().enabled = enable;
         fourPlayersButton.GetComponentInChildren<Text>().enabled = enable;
 
         sixPlayersButton.enabled = enable;
-        sixPlayersButton.GetComponent<Image>().enabled = enable;
+        sixPlayersButton.GetComponent<RawImage>().enabled = enable;
         sixPlayersButton.GetComponentInChildren<Text>().enabled = enable;
     }
 
@@ -462,7 +466,6 @@ public class GameManager : MonoBehaviour
     // Setup the Game UI's
     void GameStartUISetup()
     {
-        startPanel.enabled = false;
         EntryEnable(false);
         playerText.enabled = true;
         playerText.GetComponentInChildren<Image>().enabled = true;
