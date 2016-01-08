@@ -49,11 +49,14 @@ public class PortInfo : Photon.MonoBehaviour {
 				} else if (opCode.StartsWith ("setmode")) {
 					gameManager.SetModeAndStart (opCode);
 				} else if (opCode.StartsWith ("obstacle")) {
+                    print("gameManager " + gameManager == null);
 					gameManager.HostInitialObstacle (opCode);
 				} else if (opCode.StartsWith ("timer")) {
 					gameManager.HostInitialTimer (opCode);
                 } else if (opCode.StartsWith("start")) {
                     gameManager.GameStart();
+                } else if (opCode.StartsWith("AIMove")) {
+                    StartCoroutine(gameManager.GameManagerReactOnAINetwork(opCode));
                 }
 
 			}

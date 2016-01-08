@@ -147,13 +147,13 @@ public class Board : MonoBehaviour
                     gameManager.timer = 0.0f;
                     return false;
                 }
-            } else {
+            } else if (isTheFirstTry) {
                 currentHoodle = newCurr;
                 if (currentHoodle != null) {
                     //search for all reachable cells
                     SearchMovable(currentHoodle.GetOnBoardPos(), isTheFirstTry, true);
                 } else {
-                    print("Null");
+
                 }
                 return true;
             }
@@ -204,15 +204,18 @@ public class Board : MonoBehaviour
     //row and col are the coordiantes of chosen cell
     public IEnumerator LetMove(Vector3 destPos, int row, int col)
     {
+        bool win = false;
         if (currentHoodle != null) {
             boardCells[(int) currentHoodle.GetOnBoardPos()[0], (int) currentHoodle.GetOnBoardPos()[1]].cellOccupied = false;
             boardCells[row, col].cellOccupied = true;
             int playerNum = currentHoodle.owner;
             if (playerNum == boardCells[row, col].destinationPlayer) {
                 ++arrivalCounters[playerNum];
-                if (arrivalCounters[playerNum] == 10)
-                    gameManager.Win(currentHoodle.tag.ToString());
+                if (arrivalCounters[playerNum] == 10) {
+                    win = true;
+                }
             }
+
             if (playerNum == boardCells[(int) currentHoodle.GetOnBoardPos()[0], (int) currentHoodle.GetOnBoardPos()[1]].destinationPlayer)
                 --arrivalCounters[playerNum];
             currentHoodle.SetCoordinate(row, col);
@@ -227,14 +230,21 @@ public class Board : MonoBehaviour
             TurnOffAllPossible();
             //print("Before notify move");
             yield return StartCoroutine(currentHoodle.NotifyMove());
-            currentHoodle.TurnOffHighlight();
 
-            if (gameManager.maniaMode) {
-                currentHoodle = null;
-                gameManager.nextPlayer();
-            } else {	// If in normal mode, only search for jump choices
-                SearchMovable(currentHoodle.GetOnBoardPos(), false, boardCells[row, col].isJumpDestination);
+
+            if (win) {
+                gameManager.Win(gameManager.players[gameManager.currentPlayer].color);
+            } else {
+                currentHoodle.TurnOffHighlight();
+
+                if (gameManager.maniaMode) {
+                    currentHoodle = null;
+                    gameManager.nextPlayer();
+                } else {	// If in normal mode, only search for jump choices
+                    SearchMovable(currentHoodle.GetOnBoardPos(), false, boardCells[row, col].isJumpDestination);
+                }
             }
+
         }
     }
 
@@ -419,9 +429,9 @@ public class Board : MonoBehaviour
             if (boardCells[i, j] != null && !boardCells[i, j].cellOccupied && boardCells[i, j].withPickUps == -1) {
                 Vector3 pos = new Vector3(boardCells[i, j].cellPos.x, 0.3f, boardCells[i, j].cellPos.y);
                 int result = gameManager.SetPickUpPos(pos);
-                boardCells[i, j].withPickUps = result == -1 ? -1 : result / 16;
+                boardCells[i, j].withPickUps = result == -1 ? -1 : result / 30;
                 if (boardCells[i, j].withPickUps != -1) {
-                    gameManager.SyncAction("timer " + i + " " + j + " " + boardCells[i, j].withPickUps + " " + result % 16);
+                    gameManager.SyncAction("timer " + i + " " + j + " " + boardCells[i, j].withPickUps + " " + result % 30);
                 }
                 return;
             }
@@ -489,6 +499,7 @@ public class Board : MonoBehaviour
 
     public IEnumerator LetMoveAI(Vector3 desPos, int row, int col, int label)
     {
+        bool win = false;
         if (currentHoodle != null) {
             boardCells[(int) currentHoodle.GetOnBoardPos()[0], (int) currentHoodle.GetOnBoardPos()[1]].cellOccupied = false;
             boardCells[row, col].cellOccupied = true;
@@ -501,14 +512,16 @@ public class Board : MonoBehaviour
             int playerNum = currentHoodle.owner;
             if (playerNum == boardCells[row, col].destinationPlayer) {
                 ++arrivalCounters[playerNum];
-                if (arrivalCounters[playerNum] == 10 && !gameManager.AIMode)
-                    gameManager.Win(currentHoodle.tag.ToString());
+                if (arrivalCounters[playerNum] == 10) {
+
+                    win = true;
+                }
             }
             if (playerNum == boardCells[(int) currentHoodle.GetOnBoardPos()[0], (int) currentHoodle.GetOnBoardPos()[1]].destinationPlayer)
                 --arrivalCounters[playerNum];
             currentHoodle.SetCoordinate(row, col);
             //send movements according to the bounce queue
-            if (!gameManager.AIMode || gameManager.currentPlayer == 0) {
+            if (gameManager.currentPlayer == 0) {
                 while (boardCells[row, col].bounceQueue.Count > 0) {
                     int[] nextPos = (int[]) boardCells[row, col].bounceQueue.Dequeue();
                     Vector2 twodPos = boardCells[nextPos[0], nextPos[1]].cellPos;
@@ -528,14 +541,19 @@ public class Board : MonoBehaviour
 
             //TurnOffAllPoss();
             yield return StartCoroutine(currentHoodle.NotifyMove());
-            //currentHoodle.ResumeState();
-            //currentHoodle.TurnOffHighlight();
-            currentHoodle = null;
-            Debug.Log("can go into next");
-            gameManager.nextPlayer();
 
-            //check for time mode
-            //UpdateGameMode(row, col);
+            if (win) {
+                gameManager.Win(gameManager.players[gameManager.currentPlayer].color);
+            } else {
+
+                //currentHoodle.ResumeState();
+                //currentHoodle.TurnOffHighlight();
+                currentHoodle = null;
+                gameManager.nextPlayer();
+
+                //check for time mode
+                //UpdateGameMode(row, col);
+            }
         }
     }
 
@@ -664,7 +682,7 @@ public class Board : MonoBehaviour
             }
             if (boardCells[possibleCell[0], possibleCell[1]].lightManager != null) {
                 lightOnList.Enqueue(possibleCell);
-                boardCells[possibleCell[0], possibleCell[1]].lightManager.TurnOnHighLight();
+                //boardCells[possibleCell[0], possibleCell[1]].lightManager.TurnOnHighLight();
             }
         }
     }
@@ -730,9 +748,9 @@ public class Board : MonoBehaviour
         if (InDes(desXOfAI, desYOfAI)) finalPosState[desYOfAI][desYOfAI] = 1;//如果目的地在终营，设置该位置的状态为1
         finalPosState[currPos[myChoice][0]][currPos[myChoice][1]] = 0;//设置现在的位置为0
         */
-        
-        gameManager.SyncAction("hoodle " + myChoice);
-        gameManager.SyncAction("cell " + desXOfAI + " " + desYOfAI);
+
+        //gameManager.SyncAction("AIHoodle " + myChoice);
+        //gameManager.SyncAction("AICell " + desXOfAI + " " + desYOfAI);
 
         //维护最终位置的状态
         int desIndexInFinalPosState = InDes(desXOfAI, desYOfAI),

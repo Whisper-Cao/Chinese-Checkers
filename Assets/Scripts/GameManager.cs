@@ -59,7 +59,7 @@ public class GameManager : MonoBehaviour
 
     [HideInInspector]
     public int timeInterval;
-    private int[] playerTimeInterval;//every player have different timeIntervals
+    public int[] playerTimeInterval;//every player have different timeIntervals
     [HideInInspector]
     public bool finished = true;
 
@@ -81,6 +81,10 @@ public class GameManager : MonoBehaviour
     private GameObject port;
     private PortInfo portInfo;
     private int playerIDInRoom;
+    private int chosenAIHoodle;
+    public GameObject[] playerImages;
+
+    private Queue aIactionQueue;
 
     void Start()
     {
@@ -117,20 +121,7 @@ public class GameManager : MonoBehaviour
         allPlayers[3].GetComponent<PlayerManager>().SetActive(false);
         allPlayers[4].GetComponent<PlayerManager>().SetActive(false);
         allPlayers[5].GetComponent<PlayerManager>().SetActive(false);
-        
-        /*players[0] = orangePlayer = allPlayers[0].GetComponent<PlayerManager>();
-        players[1] = greenPlayer = allPlayers[1 + 6].GetComponent<AIManager>();
-        players[2] = bluePlayer = allPlayers[2 + 6].GetComponent<AIManager>();
-        players[3] = redPlayer = allPlayers[3 + 6].GetComponent<AIManager>();
-        players[4] = yellowPlayer = allPlayers[4 + 6].GetComponent<AIManager>();
-        players[5] = purplePlayer = allPlayers[5 + 6].GetComponent<AIManager>();*/
-
-        /*orangePlayer.Link();
-        greenPlayer.Link();
-        bluePlayer.Link();
-        redPlayer.Link();
-        yellowPlayer.Link();
-        purplePlayer.Link();*/
+       
 
         currentCamera = (allPlayers[0].GetComponent<PlayerManager>()).
             cameras[0].GetComponent<Camera>();
@@ -157,7 +148,7 @@ public class GameManager : MonoBehaviour
         playerNum = 2;
 
         board.ClearCurrentHoodle();
-        currentPlayer = 6;
+        currentPlayer = 0;
 
         timeInterval = 15;
         playerTimeInterval = new int[6];
@@ -179,6 +170,8 @@ public class GameManager : MonoBehaviour
         gamePanel.SetActive(false);
 
         roomList = new Queue();
+
+        aIactionQueue = new Queue();
     }
 
     void Update()
@@ -265,7 +258,6 @@ public class GameManager : MonoBehaviour
         winText.enabled = true;
         winText.text = player + " win!";
         board.ClearCurrentHoodle();
-        currentPlayer = 6;
         locker = true;
     }
 
@@ -303,7 +295,7 @@ public class GameManager : MonoBehaviour
     {
         GameStartUISetup();
 
-        if (IsHost()) {
+        if (IsHost() && !localMode) {
             SyncAction("start");
         }
 
@@ -429,6 +421,10 @@ public class GameManager : MonoBehaviour
             currentCamera.enabled = true;
             currentCamera.GetComponent<AudioListener>().enabled = true;
         }
+
+        print("PlayerNumber: " + playerNum);
+        print("AINum: " + AINum);
+
     }
 
     //select time game mode
@@ -482,12 +478,14 @@ public class GameManager : MonoBehaviour
                 return -1;
             }
             if (pickUp[i].activeSelf == false) {
+                int time = (int) Random.Range(timeInterval - 7, timeInterval + 3);
                 pickUp[i].SetActive(true);
                 pickUp[i].transform.position = pos;
                 pickUp[i].GetComponent<PickUpRotate>().Reset();
+                pickUp[i].GetComponent<PickUpRotate>().time = time;
                 BoxCollider bc = pickUp[i].GetComponent<BoxCollider>();
-                bc.enabled = false;
-                return i;
+                bc.enabled = true;
+                return i * 30 + time;
             }
         }
         return -1;
@@ -669,6 +667,11 @@ public class GameManager : MonoBehaviour
     {
         if (AINum < playerNum) {
             roomName = roomNameText.text;
+            if (roomName == "") {
+                roomName = "Chinese Checkers";
+            }
+            showRoomNameText.text = roomName + " : " + timeInterval + " s, " + playerNum 
+                + ", " + AINum + "\n";
             if (localMode) {
                 GameStart();
             } else {
@@ -711,7 +714,7 @@ public class GameManager : MonoBehaviour
 
     public void RoomPanel3Start()
     {
-        if (IsHost()) {
+        if (IsHost() && playerNum - AINum == roomPlayerNum) {
             GameStart();
         }
         
@@ -807,7 +810,7 @@ public class GameManager : MonoBehaviour
     string TranslateRoomInfo(string info)
     {
         string[] parseInfo = info.Split();
-        string result = parseInfo[0] + "\n\n";
+        string result = parseInfo[0] + "\n";
         result += parseInfo[1] + " S, " + parseInfo[2] + " players, " + parseInfo[3] + " AI(s)\n";
         bool flag = false;
         if (parseInfo[4] == "true") {
@@ -846,6 +849,7 @@ public class GameManager : MonoBehaviour
             }
             flag = true;
         }
+        print(result);
         return result;
         
     }
@@ -925,13 +929,11 @@ public class GameManager : MonoBehaviour
     {
         string[] actionParams = action.Split(' ');
         int i = 1;
-        Debug.Log("start parse");
         while (i < actionParams.Length) {
             //SetObstaclePos (new Vector3 (float.Parse (actionParams [i]), float.Parse (actionParams [i + 1]), float.Parse (actionParams [i + 2])));
             board.HostInitialObstacle(int.Parse(actionParams[i]), int.Parse(actionParams[i + 1]));
             i += 2;
         }
-        Debug.Log("end parse");
     }
 
     public void HostInitialTimer(string action)
@@ -947,7 +949,9 @@ public class GameManager : MonoBehaviour
 
     public void SyncAction(string action)
     {
-        portInfo.AddActionSlot(action);
+        if (!localMode) {
+            portInfo.AddActionSlot(action);
+        }
         Debug.Log("syncing " + action);
     }
 
@@ -979,7 +983,7 @@ public class GameManager : MonoBehaviour
             pickUp[i].GetComponent<PickUpRotate>().Reset();
             pickUp[i].GetComponent<PickUpRotate>().time = time;
             BoxCollider bc = pickUp[i].GetComponent<BoxCollider>();
-            bc.enabled = false;
+            bc.enabled = true;
             return i;
         }
         return -1;
@@ -995,7 +999,11 @@ public class GameManager : MonoBehaviour
     {
         string[] roomInfomations = roomInfomation.Split(' ');
         roomName = roomInfomations[0];
+        showRoomNameText.text = roomName;
         timeInterval = int.Parse(roomInfomations[1]);
+        for (int i = 0; i < 6; ++i) {
+            playerTimeInterval[i] = timeInterval; 
+        }
         playerNum = int.Parse(roomInfomations[2]);
         AINum = int.Parse(roomInfomations[3]);
         timeMode = bool.Parse(roomInfomations[4]);
@@ -1024,8 +1032,37 @@ public class GameManager : MonoBehaviour
 
     public void OnPlayerNumberChanges(int updatePlayerNumber)
     {
+        //roomPlayerNum = updatePlayerNumber;
+
+
+        if (roomPlayerNum < updatePlayerNumber) {
+            for (int i = roomPlayerNum; i < updatePlayerNumber; ++i) {
+                playerImages[i].SetActive(true);
+            }
+        } else {
+            for (int i = roomPlayerNum; i > updatePlayerNumber; --i) {
+                playerImages[i].SetActive(false);
+            }
+        }
+
         roomPlayerNum = updatePlayerNumber;
-        //TODO
-        //Change the players shown in room
     }
+
+    public IEnumerator GameManagerReactOnAINetwork(string action)
+    {
+        aIactionQueue.Enqueue(action);
+        while (aIactionQueue.Count > 0) {
+            string aiAction = (string) aIactionQueue.Dequeue();
+            string[] actionParams = aiAction.Split(' ');
+            for (int i = 0; i < 10; i++)
+                board.possibleNum[i] = 0;
+            board.ActionForAI();
+            board.currentHoodle = board.boardCells[int.Parse(actionParams[1]), int.Parse(actionParams[2])].hoodle;
+            yield return StartCoroutine(board.LetMoveAI(new Vector3(1, 2, 3), int.Parse(actionParams[3]), int.Parse(actionParams[4]), int.Parse(actionParams[5])));
+        }
+    }
+
+    
+
+
 }

@@ -38,7 +38,6 @@ public class PlayerManager :PlayerAbstract
 
 	override public void SetCurrent(bool flag)
 	{
-		player.isCurrentPlayer = flag;
 
         if (gameManager.localMode) {
             currentCamera.enabled = flag;

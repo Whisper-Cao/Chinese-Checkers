@@ -14,16 +14,15 @@ public class AIManager : PlayerAbstract
 	// Update is called once per frame
 	void Update()
 	{
-	
+	    
 	}
 
     override public void SetCurrent(bool flag)
     {
         if (flag) {
-            print("AI before is host()");
             if (gameManager.IsHost()) {
-                print("is host AI");
                 gameManager.currentCamera.enabled = true;
+                gameManager.currentCamera.GetComponent<AudioListener>().enabled = true;
                 if (!board.calcFinalPos &&
                     (gameManager.currentPlayer == 1
                     || gameManager.currentPlayer == 2
@@ -42,14 +41,26 @@ public class AIManager : PlayerAbstract
                               desY = board.desYOfAI;
                     //设置当前的hoodle
                     //Debug.Log("chosen = " + chosen);
+                    //gameManager.SyncAction("AIMove " + currX + " " + currY + " " + desX + " " + desY + " " + chosen);
                     board.currentHoodle = board.boardCells[currX, currY].hoodle;
                     //ebug.Log("owner: " + board.currentHoodle.owner);
                     //if (board.currentHoodle == null) Debug.Log("error!");
-                    StartCoroutine(board.LetMoveAI(new Vector3(1, 2, 3), desX, desY, chosen));
+                    for (int i = 0; i < 10000000; ++i)
+                        ;
+                        StartCoroutine(board.LetMoveAI(new Vector3(1, 2, 3), desX, desY, chosen));
+                    //StartCoroutine(AISleepAction(currX, currY, desX, desY, chosen));
+                    gameManager.SyncAction("AIMove " + currX + " " + currY + " " + desX + " " + desY + " " + chosen);
                 }
             }
         }
     }
+
+    /*public IEnumerator AISleepAction(int currX, int currY, int desX, int desY, int chosen)
+    {
+        //yield return new WaitForSeconds(0.5f);
+        //StartCoroutine(board.LetMoveAI(new Vector3(1, 2, 3), desX, desY, chosen));
+        //gameManager.SyncAction("AIMove " + currX + " " + currY + " " + desX + " " + desY + " " + chosen);
+    }*/
 
 
 	override public void Link()
@@ -70,9 +81,7 @@ public class AIManager : PlayerAbstract
 
     public override void PlayerReactOnNetwork(string action)
     {
-        for (int i = 0; i < hoodleMoves.Length; ++i) {
-            hoodleMoves[i].HoodleReactOnNetwork(action);
-        }
+        ;
     }
 
     public override bool IsAI()

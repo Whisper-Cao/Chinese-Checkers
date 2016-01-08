@@ -65,10 +65,8 @@ public class HoodleMove : MonoBehaviour
 
     void OnMouseDown()
     {//when chosen, highlight
-        print("Before mouse down");
         if (gameManager.IsMyTurn()) {
-            gameManager.SyncAction("hoodle " + this.GetOnBoardPos()[0] + " " + this.GetOnBoardPos()[1]);
-            print("After mouse down is my turn");
+            gameManager.SyncAction("hoodle " + onBoardCoord[0] + " " + onBoardCoord[1]);
         }
         if (gameManager.IsMyTurn() && playBoard.UpdateCurrentHoodle(this, ((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry)) {
             if (((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry == true) {	// If it's the first try, change the status

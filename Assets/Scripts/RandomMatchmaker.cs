@@ -67,4 +67,9 @@ public class RandomMatchmaker : Photon.PunBehaviour {
 			roomList.Enqueue(info.name);
 		}
 	}
+
+    public void LeaveRoom()
+    {
+        PhotonNetwork.LeaveRoom();
+    }
 }
