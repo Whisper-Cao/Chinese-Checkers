@@ -65,12 +65,19 @@ public class HoodleMove : MonoBehaviour
 
     void OnMouseDown()
     {//when chosen, highlight
+        print("Before mouse down");
+        if (gameManager.IsMyTurn()) {
+            gameManager.SyncAction("hoodle " + this.GetOnBoardPos()[0] + " " + this.GetOnBoardPos()[1]);
+            print("After mouse down is my turn");
+        }
         if (gameManager.IsMyTurn() && playBoard.UpdateCurrentHoodle(this, ((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry)) {
             if (((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry == true) {	// If it's the first try, change the status
                 ((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry = false;
                 ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX = this.GetOnBoardPos()[0];
                 ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY = this.GetOnBoardPos()[1];
             }
+           
+
             TurnOnHighlight();
         }
         pendingCollision = 0;
@@ -182,8 +189,9 @@ public class HoodleMove : MonoBehaviour
 
     public void HoodleReactOnNetwork(string action)
     {
+        print("React on mouse down");
         string[] actionParam = action.Split(' ');
-        if (int.Parse(actionParam[1]) == onBoardCoord[0] && int.Parse(actionParam[2]) == onBoardCoord[1] && !self)
+        if (int.Parse(actionParam[1]) == onBoardCoord[0] && int.Parse(actionParam[2]) == onBoardCoord[1])
             if (playBoard.UpdateCurrentHoodle(this, ((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry)) {
                 if (((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry == true) {	// If it's the first try, change the status
                     ((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry = false;
@@ -193,7 +201,6 @@ public class HoodleMove : MonoBehaviour
                 TurnOnHighlight();
             }
         pendingCollision = 0;
-        self = false;
     }
 
 }

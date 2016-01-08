@@ -730,6 +730,10 @@ public class Board : MonoBehaviour
         if (InDes(desXOfAI, desYOfAI)) finalPosState[desYOfAI][desYOfAI] = 1;//如果目的地在终营，设置该位置的状态为1
         finalPosState[currPos[myChoice][0]][currPos[myChoice][1]] = 0;//设置现在的位置为0
         */
+        
+        gameManager.SyncAction("hoodle " + myChoice);
+        gameManager.SyncAction("cell " + desXOfAI + " " + desYOfAI);
+
         //维护最终位置的状态
         int desIndexInFinalPosState = InDes(desXOfAI, desYOfAI),
             currIndexInFinalPosState = InDes(currPos[myChoice][0], currPos[myChoice][1]);

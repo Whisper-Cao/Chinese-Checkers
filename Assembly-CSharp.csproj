@@ -106,11 +106,11 @@
  <Reference Include="UnityEngine.Networking">
  <HintPath>D:/Program Files/Unity/Editor/Data/UnityExtensions/Unity/Networking/UnityEngine.Networking.dll</HintPath>
  </Reference>
- <Reference Include="websocket-sharp">
- <HintPath>D:/Programming/Github/Chinese-Checkers/Assets/Plugins/WebSocket/websocket-sharp.dll</HintPath>
- </Reference>
  <Reference Include="Photon3Unity3D">
  <HintPath>D:/Programming/Github/Chinese-Checkers/Assets/Plugins/Photon3Unity3D.dll</HintPath>
+ </Reference>
+ <Reference Include="websocket-sharp">
+ <HintPath>D:/Programming/Github/Chinese-Checkers/Assets/Plugins/WebSocket/websocket-sharp.dll</HintPath>
  </Reference>
  <Reference Include="Mono.Cecil">
  <HintPath>D:/Program Files/Unity/Editor/Data/Managed/Mono.Cecil.dll</HintPath>

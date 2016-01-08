@@ -41,6 +41,7 @@ public class FloorLightController : MonoBehaviour
         Vector3 mousePos = TranslateMousePos(Input.mousePosition);
         if ((new Vector2(mousePos.x, mousePos.z) - new Vector2(transform.position.x, transform.position.z)).magnitude < 0.4) {
             if (lightOn) {
+                gameManager.SyncAction("cell " + row + " " + col);
                 //print("Let move");
                 StartCoroutine(playBoard.LetMove(new Vector3(transform.position.x, 0, transform.position.z), row, col));
             }
@@ -75,9 +76,7 @@ public class FloorLightController : MonoBehaviour
     public void LightReactOnNetwork(string action)
     {
         string[] actionParam = action.Split(' ');
-        Debug.Log("get cell clicked info");
         if (int.Parse(actionParam[1]) == row && int.Parse(actionParam[2]) == col) {
-            Debug.Log("Let move");
             StartCoroutine(playBoard.LetMove(new Vector3(transform.position.x, 0, transform.position.z), row, col));
         }
     }

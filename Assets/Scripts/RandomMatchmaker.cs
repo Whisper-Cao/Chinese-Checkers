@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.UI;
 using System.Collections;
 using Photon;
 
@@ -6,6 +7,8 @@ public class RandomMatchmaker : Photon.PunBehaviour {
 
 	private GameObject port;
 	private GameManager gameManager;
+
+    public Text networkText;
 
 	private int playerNum;
 	// Use this for initialization
@@ -26,6 +29,8 @@ public class RandomMatchmaker : Photon.PunBehaviour {
 			playerNum = PhotonNetwork.playerList.Length;
 			gameManager.OnPlayerNumberChanges(playerNum);
 		}
+
+        networkText.text = PhotonNetwork.connectionStateDetailed.ToString();
 	}
 
 	public override void OnJoinedLobby ()
@@ -45,7 +50,7 @@ public class RandomMatchmaker : Photon.PunBehaviour {
 	{
 		playerNum = PhotonNetwork.playerList.Length;
 		port = PhotonNetwork.Instantiate ("port", Vector3.zero, Quaternion.identity, 0);
-		gameManager.setPort (port, port.GetComponent<PortInfo> (), playerNum);
+		gameManager.SetPort (port, port.GetComponent<PortInfo> (), playerNum - 1);
 	}
 
 	public void CreateRoom(string roomInformation) {

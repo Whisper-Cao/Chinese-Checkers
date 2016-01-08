@@ -14,7 +14,7 @@ public abstract class PlayerAbstract : MonoBehaviour
 
     abstract public void Link();
 
-
+    abstract public bool IsAI();
 
     public void SetActive(bool flag)
     {
@@ -25,6 +25,8 @@ public abstract class PlayerAbstract : MonoBehaviour
 
     public void Initialize()
     {
+        print("hoodles.Length:" + hoodles.Length);
+
         for (int i = 0; i < hoodles.Length; ++i) {
             hoodles[i].SetActive(true);
             hoodleMoves[i].AllowOccupy();

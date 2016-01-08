@@ -40,7 +40,6 @@ public class PortInfo : Photon.MonoBehaviour {
 			int count = (int)stream.ReceiveNext ();
 			for(int i = 0; i < count; ++i) {
 				object unknow = stream.ReceiveNext ();
-				Debug.Log (unknow.ToString ());
 				opCode = (string)unknow;
 
 				if (opCode.StartsWith ("hoodle")) {
@@ -54,7 +53,7 @@ public class PortInfo : Photon.MonoBehaviour {
 				} else if (opCode.StartsWith ("timer")) {
 					gameManager.HostInitialTimer (opCode);
                 } else if (opCode.StartsWith("start")) {
-                    gameManager.RoomPanel3Start();
+                    gameManager.GameStart();
                 }
 
 			}

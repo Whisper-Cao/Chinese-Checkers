@@ -38,14 +38,7 @@ public class GameManager : MonoBehaviour
     public GameObject[] allPlayers;
     [HideInInspector]
     public PlayerAbstract[] players;
-    private PlayerAbstract orangePlayer;
-    private PlayerAbstract redPlayer;
-    private PlayerAbstract bluePlayer;
-    private PlayerAbstract greenPlayer;
-    private PlayerAbstract purplePlayer;
-    private PlayerAbstract yellowPlayer;
     private PlayerManager[] myPlayers;
-    private AIManager[] hostAIs;
 
     //arrays for pickups for game mode
     private GameObject[] pickUp; //time mode
@@ -76,7 +69,6 @@ public class GameManager : MonoBehaviour
     public bool flyMode;
     public bool hintMode;
     public bool maniaMode;
-    public bool AIMode;
     public bool localMode;
 
     //for delay
@@ -106,13 +98,26 @@ public class GameManager : MonoBehaviour
         networkManager = GameObject.FindGameObjectWithTag("NetworkManager").GetComponent<RandomMatchmaker>();
 
         players = new PlayerAbstract[6];
-        players[0] = orangePlayer = allPlayers[0].GetComponent<PlayerManager>();
-        players[1] = greenPlayer = allPlayers[1].GetComponent<PlayerManager>();
-        players[2] = bluePlayer = allPlayers[2].GetComponent<PlayerManager>();
-        players[3] = redPlayer = allPlayers[3].GetComponent<PlayerManager>();
-        players[4] = yellowPlayer = allPlayers[4].GetComponent<PlayerManager>();
-        players[5] = purplePlayer = allPlayers[5].GetComponent<PlayerManager>();
+        allPlayers[0].GetComponent<PlayerManager>().Link();
+        allPlayers[1].GetComponent<PlayerManager>().Link();
+        allPlayers[2].GetComponent<PlayerManager>().Link();
+        allPlayers[3].GetComponent<PlayerManager>().Link();
+        allPlayers[4].GetComponent<PlayerManager>().Link();
+        allPlayers[5].GetComponent<PlayerManager>().Link();
+        allPlayers[6].GetComponent<AIManager>().Link();
+        allPlayers[7].GetComponent<AIManager>().Link();
+        allPlayers[8].GetComponent<AIManager>().Link();
+        allPlayers[9].GetComponent<AIManager>().Link();
+        allPlayers[10].GetComponent<AIManager>().Link();
+        allPlayers[11].GetComponent<AIManager>().Link();
 
+        allPlayers[0].GetComponent<PlayerManager>().SetActive(false);
+        allPlayers[1].GetComponent<PlayerManager>().SetActive(false);
+        allPlayers[2].GetComponent<PlayerManager>().SetActive(false);
+        allPlayers[3].GetComponent<PlayerManager>().SetActive(false);
+        allPlayers[4].GetComponent<PlayerManager>().SetActive(false);
+        allPlayers[5].GetComponent<PlayerManager>().SetActive(false);
+        
         /*players[0] = orangePlayer = allPlayers[0].GetComponent<PlayerManager>();
         players[1] = greenPlayer = allPlayers[1 + 6].GetComponent<AIManager>();
         players[2] = bluePlayer = allPlayers[2 + 6].GetComponent<AIManager>();
@@ -120,18 +125,18 @@ public class GameManager : MonoBehaviour
         players[4] = yellowPlayer = allPlayers[4 + 6].GetComponent<AIManager>();
         players[5] = purplePlayer = allPlayers[5 + 6].GetComponent<AIManager>();*/
 
-        orangePlayer.Link();
+        /*orangePlayer.Link();
         greenPlayer.Link();
         bluePlayer.Link();
         redPlayer.Link();
         yellowPlayer.Link();
-        purplePlayer.Link();
+        purplePlayer.Link();*/
 
-        currentCamera = ((PlayerManager) orangePlayer).cameras[0].GetComponent<Camera>();
+        currentCamera = (allPlayers[0].GetComponent<PlayerManager>()).
+            cameras[0].GetComponent<Camera>();
         currentCamera.enabled = true;
         currentCamera.GetComponent<AudioListener>().enabled = true;
 
-        DisableAllHoodles();
         DisableAllExtraElements();
 
         winText = GameObject.FindGameObjectWithTag("WinTextTag").GetComponent<Text>();
@@ -145,14 +150,11 @@ public class GameManager : MonoBehaviour
         musicButtonText = GameObject.
             FindGameObjectWithTag("MusicButton").GetComponentInChildren<Text>();
 
-        AIMode = timeMode = obstacleMode = flyMode = hintMode = maniaMode = false;
+        timeMode = obstacleMode = flyMode = hintMode = maniaMode = false;
         localMode = false;
 
         AINum = 0;
         playerNum = 2;
-        
-
-        playerText.text = players[0].color;
 
         board.ClearCurrentHoodle();
         currentPlayer = 6;
@@ -297,7 +299,7 @@ public class GameManager : MonoBehaviour
        
     }
 
-    void GameStart()
+    public void GameStart()
     {
         GameStartUISetup();
 
@@ -308,60 +310,125 @@ public class GameManager : MonoBehaviour
 
         switch (playerNum) {
             case 2:
-                orangePlayer.Initialize();
-                redPlayer.Initialize();
+                /*players[0] = allPlayers[0].GetComponent<PlayerManager>();
+                
+                if (AINum == 1) {
+                    players[3] = allPlayers[7].GetComponent<AIManager>();
+                } else {
+                    players[3] = allPlayers[1].GetComponent<PlayerManager>();
+                }*/
 
-                myPlayers = new PlayerManager[2];
-                myPlayers[0] = (PlayerManager) players[0];
-                myPlayers[1] = (PlayerManager) players[3];
+                if (localMode) {
+                    myPlayers = new PlayerManager[playerNum - AINum];
+                }
+
+                for (int i = 0; i < 2; ++i) {
+                    if (i < playerNum - AINum) {
+                        players[i * 3] = allPlayers[i * 3].GetComponent<PlayerManager>();
+                        if (localMode) {
+                            myPlayers[i] = (PlayerManager) players[i * 3];
+                        }
+                    } else {
+                        players[i * 3] = allPlayers[i * 3 + 6].GetComponent<AIManager>();
+                    }
+
+                    players[i * 3].Initialize();
+
+                    print("players[" + i * 3 + "] Initialized");
+                    
+                }
+
+                if (!localMode) {
+                    myPlayers = new PlayerManager[1];
+                    myPlayers[0] = (PlayerManager) players[playerIDInRoom * 3];
+                }
+
                 break;
             case 3:
+                if (localMode) {
+                    myPlayers = new PlayerManager[playerNum - AINum];
+                }
 
-                myPlayers = new PlayerManager[3];
-                myPlayers[0] = (PlayerManager) players[0];
-                myPlayers[1] = (PlayerManager) players[2];
-                myPlayers[2] = (PlayerManager) players[4];
-                orangePlayer.Initialize();
-                bluePlayer.Initialize();
-                yellowPlayer.Initialize();
+                for (int i = 0; i < 3; ++i) {
+                    if (i < playerNum - AINum) {
+                        players[i * 2] = allPlayers[i * 2].GetComponent<PlayerManager>();
+                        if (localMode) {
+                            myPlayers[i] = (PlayerManager) players[i *2];
+                        }
+                    } else {
+                        players[i * 2] = allPlayers[i * 2 + 6].GetComponent<AIManager>();
+                    }
+                    players[i * 2].Initialize();
+                }
+
+                if (!localMode) {
+                    myPlayers = new PlayerManager[1];
+                    myPlayers[0] = (PlayerManager) players[playerIDInRoom * 2];
+                }
+
                 break;
             case 4:
-                myPlayers = new PlayerManager[4];
-                myPlayers[0] = (PlayerManager) players[0];
-                myPlayers[1] = (PlayerManager) players[1];
-                myPlayers[2] = (PlayerManager) players[3];
-                myPlayers[3] = (PlayerManager) players[4];
-                orangePlayer.Initialize();
-                greenPlayer.Initialize();
-                redPlayer.Initialize();
-                yellowPlayer.Initialize();
+                if (localMode) {
+                    myPlayers = new PlayerManager[playerNum - AINum];
+                }
+
+                for (int i = 0; i < 4; ++i) {
+                    if (i < playerNum - AINum) {
+                        players[i + (i + 1) / 3] = allPlayers[i + (i + 1) / 3].GetComponent<PlayerManager>();
+                        if (localMode) {
+                            myPlayers[i] = (PlayerManager) players[i + (i + 1) / 3];
+                        }
+                    } else {
+                        players[i + (i + 1) / 3] = allPlayers[i + (i + 1) / 3 + 6].GetComponent<AIManager>();
+                    }
+                    players[i + (i + 1) / 3].Initialize();
+                }
+
+                if (!localMode) {
+                    myPlayers = new PlayerManager[1];
+                    myPlayers[0] = (PlayerManager) players[playerIDInRoom + (playerIDInRoom + 1) / 3];
+                }
+
                 break;
             case 6:
-                if (!AIMode) {
-                    myPlayers = new PlayerManager[6];
-                    myPlayers[0] = (PlayerManager) players[0];
-                    myPlayers[1] = (PlayerManager) players[1];
-                    myPlayers[2] = (PlayerManager) players[2];
-                    myPlayers[3] = (PlayerManager) players[3];
-                    myPlayers[4] = (PlayerManager) players[4];
-                    myPlayers[5] = (PlayerManager) players[5];
-                } else {
-                    myPlayers = new PlayerManager[1];
-                    myPlayers[0] = (PlayerManager) players[0];
+                if (localMode) {
+                    myPlayers = new PlayerManager[playerNum - AINum];
                 }
-                orangePlayer.Initialize();
-                greenPlayer.Initialize();
-                bluePlayer.Initialize();
-                redPlayer.Initialize();
-                yellowPlayer.Initialize();
-                purplePlayer.Initialize();
+
+                for (int i = 0; i < 6; ++i) {
+                    if (i < playerNum - AINum) {
+                        players[i] = allPlayers[i].GetComponent<PlayerManager>();
+                        if (localMode) {
+                            myPlayers[i] = (PlayerManager) players[i];
+                        }
+                    } else {
+                        players[i] = allPlayers[i + 6].GetComponent<AIManager>();
+                    }
+                    players[i].Initialize();
+                }
+
+                if (!localMode) {
+                    myPlayers = new PlayerManager[1];
+                    myPlayers[0] = (PlayerManager) players[playerIDInRoom];
+                }
+
                 break;
         }
+
+        
 
         currentPlayer = 0;
         board.ClearCurrentHoodle();
         players[currentPlayer].SetCurrent(true);
         locker = false;
+        playerText.text = players[0].color;
+        if (!localMode) {
+            currentCamera.enabled = false;
+            currentCamera.GetComponent<AudioListener>().enabled = false;
+            currentCamera = myPlayers[0].currentCamera;
+            currentCamera.enabled = true;
+            currentCamera.GetComponent<AudioListener>().enabled = true;
+        }
     }
 
     //select time game mode
@@ -380,11 +447,6 @@ public class GameManager : MonoBehaviour
     public void GameModeFly()
     {
         flyMode = !flyMode;
-    }
-
-    public void GameModeAI()
-    {
-        AIMode = !AIMode;
     }
 
     //highlight hint game mode
@@ -480,17 +542,6 @@ public class GameManager : MonoBehaviour
         return -1;
     }
 
-    //when start, disable all hoodles until a game mode is chosen
-    void DisableAllHoodles()
-    {
-        orangePlayer.SetActive(false);
-        redPlayer.SetActive(false);
-        bluePlayer.SetActive(false);
-        greenPlayer.SetActive(false);
-        yellowPlayer.SetActive(false);
-        purplePlayer.SetActive(false);
-    }
-
     //when start, disable all pickUps and obstacles until a game mode is chosen
     void DisableAllExtraElements()
     {
@@ -518,6 +569,7 @@ public class GameManager : MonoBehaviour
         roomPanel3.SetActive(false);
         gamePanel.SetActive(true);
         playerText.enabled = true;
+        
         timeText.enabled = true;
         cameraButton.enabled = true;
         cameraButton.GetComponentInChildren<RawImage>().enabled = true;
@@ -659,7 +711,9 @@ public class GameManager : MonoBehaviour
 
     public void RoomPanel3Start()
     {
-        GameStart();
+        if (IsHost()) {
+            GameStart();
+        }
         
     }
 
@@ -800,6 +854,7 @@ public class GameManager : MonoBehaviour
     public void RoomPanel1Select1()
     {
         if (roomArray.Length > currentRoom) {
+            SetRoomInformation((string) roomArray[currentRoom]);
             JoinRoom((string) roomArray[currentRoom]);
         }
     }
@@ -807,29 +862,50 @@ public class GameManager : MonoBehaviour
     public void RoomPanel1Select2()
     {
         if (roomArray.Length > currentRoom + 1) {
+            SetRoomInformation((string) roomArray[currentRoom + 1]);
             JoinRoom((string) roomArray[currentRoom + 1]);
         }
     }
 
-    public void setPort(GameObject port, PortInfo portInfo, int playerNum)
+    public void SetPort(GameObject port, PortInfo portInfo, int playerNum)
     {
         this.port = port;
         this.portInfo = portInfo;
         this.playerIDInRoom = playerNum;
 
-        Debug.Log("set port");
-
-        if (playerIDInRoom != 1) {
+        /*if (playerIDInRoom != 1) {
             //GameModeChoiceDisable ();
             //EntryEnable (false);
-        }
+        }*/
     }
 
     public void GameManagerReactOnNetwork(string action)
     {
-        for (int i = 0; i < myPlayers.Length; ++i) {
-            myPlayers[i].PlayerReactOnNetwork(action);
+        switch (playerNum) {
+            case 2:
+                for (int i = 0; i < 2; ++i) {
+                    players[i * 3].PlayerReactOnNetwork(action);
+                }
+                break;
+            case 3:
+                for (int i = 0; i < 3; ++i) {
+                    players[i * 2].PlayerReactOnNetwork(action);
+                }
+                break;
+            case 4:
+                for (int i = 0; i < 3; ++i) {
+                    players[i + (i + 1) / 3].PlayerReactOnNetwork(action);
+                }
+                break;
+            case 6:
+                for (int i = 0; i < 3; ++i) {
+                    players[i].PlayerReactOnNetwork(action);
+                }
+                break;
         }
+        /*for (int i = 0; i < players.Length; ++i) {
+            players[i].PlayerReactOnNetwork(action);
+        }*/
     }
 
     public void SetModeAndStart(string action)
@@ -843,13 +919,6 @@ public class GameManager : MonoBehaviour
         playerNum = int.Parse(actionParams[6]);
 
         GameModeChoiceDisable();
-
-        /*if (playerNum == 2)
-            TwoPlayerGameStart ();
-        else if (playerNum == 3)
-            ThreePlayersGameStart ();
-        else if (playerNum == 6)
-            SixPlayersGameStart ();*/
     }
 
     public void HostInitialObstacle(string action)
@@ -884,13 +953,22 @@ public class GameManager : MonoBehaviour
 
     public bool IsMyTurn()
     {
+        for (int i = 0; i < myPlayers.Length; ++i) {
+            if (myPlayers[i] == players[currentPlayer]) {
+                return true;
+            }
+        }
 
-        return (playerIDInRoom * 3 - 3 == currentPlayer);
+        /*if (players[currentPlayer].IsAI()) {
+            return true;
+        }*/
+
+        return false;
     }
 
     public bool IsHost()
     {
-        return playerIDInRoom == 1;
+        return playerIDInRoom == 0;
     }
 
     public int DeterministicSetPickUpPos(Vector3 pos, int i, int time)

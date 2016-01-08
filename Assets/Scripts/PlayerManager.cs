@@ -40,15 +40,12 @@ public class PlayerManager :PlayerAbstract
 	{
 		player.isCurrentPlayer = flag;
 
-        /*if (gameManager.cameraButton.isOn) {
-            if (currentCameraNum == 0)
-                ChangePerspective();
-        }*/
-
-		currentCamera.enabled = flag;
-        currentCamera.GetComponent<AudioListener>().enabled = flag;
-        if (flag) {
-            gameManager.currentCamera = currentCamera;
+        if (gameManager.localMode) {
+            currentCamera.enabled = flag;
+            currentCamera.GetComponent<AudioListener>().enabled = flag;
+            if (flag) {
+                gameManager.currentCamera = currentCamera;
+            }
         }
 
         isTheFirstTry = true;
@@ -89,6 +86,11 @@ public class PlayerManager :PlayerAbstract
         for (int i = 0; i < hoodleMoves.Length; ++i) {
             hoodleMoves[i].HoodleReactOnNetwork(action);
         }
+    }
+
+    public override bool IsAI()
+    {
+        return false;
     }
 }
 
