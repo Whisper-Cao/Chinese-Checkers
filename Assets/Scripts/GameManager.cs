@@ -61,6 +61,7 @@ public class GameManager : MonoBehaviour
     public bool flyMode;
     public bool hintMode;
     public bool maniaMode;
+    public bool AIMode;
 
     //for delay
     private bool delayLock;
@@ -84,12 +85,19 @@ public class GameManager : MonoBehaviour
         board = GameObject.FindGameObjectWithTag("HoldBoard").GetComponent<Board>();
 
         players = new PlayerAbstract[6];
-        players[0] = orangePlayer = allPlayers[0].GetComponent<PlayerManager>();
+        /*players[0] = orangePlayer = allPlayers[0].GetComponent<PlayerManager>();
         players[1] = greenPlayer = allPlayers[1].GetComponent<PlayerManager>();
         players[2] = bluePlayer = allPlayers[2].GetComponent<PlayerManager>();
         players[3] = redPlayer = allPlayers[3].GetComponent<PlayerManager>();
         players[4] = yellowPlayer = allPlayers[4].GetComponent<PlayerManager>();
-        players[5] = purplePlayer = allPlayers[5].GetComponent<PlayerManager>();
+        players[5] = purplePlayer = allPlayers[5].GetComponent<PlayerManager>();*/
+
+        players[0] = orangePlayer = allPlayers[0].GetComponent<PlayerManager>();
+        players[1] = greenPlayer = allPlayers[1 + 6].GetComponent<AIManager>();
+        players[2] = bluePlayer = allPlayers[2 + 6].GetComponent<AIManager>();
+        players[3] = redPlayer = allPlayers[3 + 6].GetComponent<AIManager>();
+        players[4] = yellowPlayer = allPlayers[4 + 6].GetComponent<AIManager>();
+        players[5] = purplePlayer = allPlayers[5 + 6].GetComponent<AIManager>();
 
         orangePlayer.Link();
         greenPlayer.Link();
@@ -116,7 +124,7 @@ public class GameManager : MonoBehaviour
         musicButtonText = GameObject.
             FindGameObjectWithTag("MusicButton").GetComponentInChildren<Text>();
 
-        timeMode = obstacleMode = flyMode = hintMode = maniaMode = false;
+        AIMode = timeMode = obstacleMode = flyMode = hintMode = maniaMode = false;
 
         
 
@@ -296,14 +304,18 @@ public class GameManager : MonoBehaviour
         yellowPlayer.Initialize();
         purplePlayer.Initialize();
 
-        myPlayers = new PlayerManager[6];
-        myPlayers[0] = (PlayerManager) players[0];
-        myPlayers[1] = (PlayerManager) players[1];
-        myPlayers[2] = (PlayerManager) players[2];
-        myPlayers[3] = (PlayerManager) players[3];
-        myPlayers[4] = (PlayerManager) players[4];
-        myPlayers[5] = (PlayerManager) players[5];
-
+        if (!AIMode) {
+            myPlayers = new PlayerManager[6];
+            myPlayers[0] = (PlayerManager) players[0];
+            myPlayers[1] = (PlayerManager) players[1];
+            myPlayers[2] = (PlayerManager) players[2];
+            myPlayers[3] = (PlayerManager) players[3];
+            myPlayers[4] = (PlayerManager) players[4];
+            myPlayers[5] = (PlayerManager) players[5];
+        } else {
+            myPlayers = new PlayerManager[1];
+            myPlayers[0] = (PlayerManager) players[0];
+        }
         playerNum = 6;
         GameStart();
     }
@@ -337,6 +349,11 @@ public class GameManager : MonoBehaviour
     public void GameModeFly()
     {
         flyMode = !flyMode;
+    }
+
+    public void GameModeAI()
+    {
+        AIMode = !AIMode;
     }
 
     //highlight hint game mode

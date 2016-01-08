@@ -3,7 +3,6 @@ using System.Collections;
 
 public class PlayerManager :PlayerAbstract
 {
-	public GameObject[] cameras;
 	public Camera currentCamera;
 	int currentCameraNum;
 	public Player player;
