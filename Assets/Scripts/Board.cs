@@ -110,6 +110,8 @@ public class Board : MonoBehaviour
                 if (currentHoodle != null) {
                     //search for all reachable cells
                     SearchMovable(currentHoodle.GetOnBoardPos(), isTheFirstTry, true);
+                } else {
+                    print("Null");
                 }
                 return true;
             }

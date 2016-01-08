@@ -25,15 +25,10 @@ public class GameManager : MonoBehaviour
 
     private bool locker;//lock the timer
 
-    //UI for choosing game mode
-    private Button twoPlayersButton;
-    private Button threePlayersButton;
-    private Button fourPlayersButton;
-    private Button sixPlayersButton;
-    private Button startButton;
-    private Toggle[] gameModeToggle;
-    private RawImage background;
-    [HideInInspector] public Toggle cameraToggle;
+    [HideInInspector] public Button cameraButton;
+    public GameObject mainPanel;
+    public GameObject roomPanel1, roomPanel2, gamePanel;
+    private Text soundButtonText, musicButtonText;
 
     //arrays keeping the same color of hoodles
     public GameObject[] allPlayers;
@@ -45,6 +40,8 @@ public class GameManager : MonoBehaviour
     private PlayerAbstract greenPlayer;
     private PlayerAbstract purplePlayer;
     private PlayerAbstract yellowPlayer;
+    private PlayerManager[] myPlayers;
+    private AIManager[] hostAIs;
 
     //arrays for pickups for game mode
     private GameObject[] pickUp; //time mode
@@ -69,22 +66,22 @@ public class GameManager : MonoBehaviour
     private bool delayLock;
     private float delayTimer;
 
+    public bool sound;
+    private AudioSource bgm;
+
     void Start()
     {
         locker = true;
         board = GameObject.FindGameObjectWithTag("HoldBoard").GetComponent<Board>();
         playerText = GameObject.FindGameObjectWithTag("PlayerTextTag").GetComponent<Text>();
         timeText = GameObject.FindGameObjectWithTag("TimeTextTag").GetComponent<Text>();
-        cameraToggle = GameObject.FindGameObjectWithTag("CameraToggleTag").GetComponent<Toggle>();
+        cameraButton = GameObject.FindGameObjectWithTag("CameraToggleTag").GetComponent<Button>();
         playerText.enabled = false;
-        playerText.GetComponentInChildren<Image>().enabled = false;
         timeText.enabled = false;
-        timeText.GetComponentInChildren<Image>().enabled = false;
-        cameraToggle.enabled = false;
-        cameraToggle.GetComponentInChildren<Image>().enabled = false;
-        cameraToggle.GetComponentInChildren<Text>().enabled = false;
+        cameraButton.enabled = false;
+        cameraButton.GetComponentInChildren<RawImage>().enabled = false;
+        cameraButton.GetComponentInChildren<Text>().enabled = false;
         board = GameObject.FindGameObjectWithTag("HoldBoard").GetComponent<Board>();
-        background = GameObject.FindGameObjectWithTag("Background").GetComponent<RawImage>();
 
         players = new PlayerAbstract[6];
         players[0] = orangePlayer = allPlayers[0].GetComponent<PlayerManager>();
@@ -110,26 +107,18 @@ public class GameManager : MonoBehaviour
 
         winText = GameObject.FindGameObjectWithTag("WinTextTag").GetComponent<Text>();
         winPanel = GameObject.FindGameObjectWithTag("WinPanelTag").GetComponent<Image>();
+        winPanel.enabled = false;
+        winText.enabled = false;
 
-        twoPlayersButton = GameObject.FindGameObjectWithTag("2PlayerButton").GetComponent<Button>();
-        threePlayersButton = GameObject.FindGameObjectWithTag("3PlayerButton").GetComponent<Button>();
-        fourPlayersButton = GameObject.FindGameObjectWithTag("4PlayerButton").GetComponent<Button>();
-        sixPlayersButton = GameObject.FindGameObjectWithTag("6PlayerButton").GetComponent<Button>();
-        EntryEnable(false);
+        soundButtonText = GameObject.
+            FindGameObjectWithTag("SoundButton").GetComponentInChildren<Text>();
 
-        gameModeToggle = new Toggle[5];
-        gameModeToggle[0] = GameObject.FindGameObjectWithTag("TimeModeToggleTag").GetComponent<Toggle>();
-        gameModeToggle[1] = GameObject.FindGameObjectWithTag("ObstacleModeToggleTag").GetComponent<Toggle>();
-        gameModeToggle[2] = GameObject.FindGameObjectWithTag("FlyModeToggleTag").GetComponent<Toggle>();
-        gameModeToggle[3] = GameObject.FindGameObjectWithTag("HintModeToggleTag").GetComponent<Toggle>();
-        gameModeToggle[4] = GameObject.FindGameObjectWithTag("ManiaModeToggleTag").GetComponent<Toggle>();
-
-        for (int i = 0; i < 5; ++i)
-            gameModeToggle[i].isOn = false;
+        musicButtonText = GameObject.
+            FindGameObjectWithTag("MusicButton").GetComponentInChildren<Text>();
 
         timeMode = obstacleMode = flyMode = hintMode = maniaMode = false;
 
-        startButton = GameObject.FindGameObjectWithTag("StartButtonTag").GetComponent<Button>();
+        
 
         playerText.text = players[0].color;
         timer = timeInterval;
@@ -147,6 +136,14 @@ public class GameManager : MonoBehaviour
         //for delay
         delayLock = false;
         delayTimer = 0.0f;
+
+        bgm = GameObject.FindGameObjectWithTag("BGM").GetComponent<AudioSource>();
+        sound = true;
+        bgm.mute = false;
+
+        roomPanel1.SetActive(false);
+        roomPanel2.SetActive(false);
+        gamePanel.SetActive(false);
 
     }
 
@@ -248,6 +245,10 @@ public class GameManager : MonoBehaviour
         orangePlayer.Initialize();
         redPlayer.Initialize();
 
+        myPlayers = new PlayerManager[2];
+        myPlayers[0] = (PlayerManager) players[0];
+        myPlayers[1] = (PlayerManager) players[3];
+
         playerNum = 2;
         GameStart();
     }
@@ -258,7 +259,13 @@ public class GameManager : MonoBehaviour
         orangePlayer.Initialize();
         bluePlayer.Initialize();
         yellowPlayer.Initialize();
-       
+
+        myPlayers = new PlayerManager[3];
+        myPlayers[0] = (PlayerManager) players[0];
+        myPlayers[1] = (PlayerManager) players[2];
+        myPlayers[2] = (PlayerManager) players[4];
+
+        playerNum = 3;
         GameStart();
     }
 
@@ -268,6 +275,13 @@ public class GameManager : MonoBehaviour
         greenPlayer.Initialize();
         redPlayer.Initialize();
         yellowPlayer.Initialize();
+
+        myPlayers = new PlayerManager[4];
+        myPlayers[0] = (PlayerManager) players[0];
+        myPlayers[1] = (PlayerManager) players[1];
+        myPlayers[2] = (PlayerManager) players[3];
+        myPlayers[3] = (PlayerManager) players[4];
+
 
         playerNum = 4;
         GameStart();
@@ -281,6 +295,14 @@ public class GameManager : MonoBehaviour
         redPlayer.Initialize();
         yellowPlayer.Initialize();
         purplePlayer.Initialize();
+
+        myPlayers = new PlayerManager[6];
+        myPlayers[0] = (PlayerManager) players[0];
+        myPlayers[1] = (PlayerManager) players[1];
+        myPlayers[2] = (PlayerManager) players[2];
+        myPlayers[3] = (PlayerManager) players[3];
+        myPlayers[4] = (PlayerManager) players[4];
+        myPlayers[5] = (PlayerManager) players[5];
 
         playerNum = 6;
         GameStart();
@@ -297,8 +319,6 @@ public class GameManager : MonoBehaviour
             timer += 5.0f;
         }
         locker = false;
-
-        background.enabled = false;
     }
 
     //select time game mode
@@ -429,54 +449,63 @@ public class GameManager : MonoBehaviour
             obstacle[i].SetActive(false);
     }
 
-    void EntryEnable(bool enable)
-    {
-        twoPlayersButton.enabled = enable;
-        twoPlayersButton.GetComponent<RawImage>().enabled = enable;
-        twoPlayersButton.GetComponentInChildren<Text>().enabled = enable;
-
-        threePlayersButton.enabled = enable;
-        threePlayersButton.GetComponent<RawImage>().enabled = enable;
-        threePlayersButton.GetComponentInChildren<Text>().enabled = enable;
-
-        fourPlayersButton.enabled = enable;
-        fourPlayersButton.GetComponent<RawImage>().enabled = enable;
-        fourPlayersButton.GetComponentInChildren<Text>().enabled = enable;
-
-        sixPlayersButton.enabled = enable;
-        sixPlayersButton.GetComponent<RawImage>().enabled = enable;
-        sixPlayersButton.GetComponentInChildren<Text>().enabled = enable;
-    }
-
     public void GameModeChoiceDisable()
     {
-        for (int i = 0; i < 5; i++) {
-            gameModeToggle[i].enabled = false;
-            Image[] images = gameModeToggle[i].GetComponentsInChildren<Image>();
-            for (int j = 0; j < images.Length; ++j)
-                images[j].enabled = false;
-            gameModeToggle[i].GetComponentInChildren<Text>().enabled = false;
-        }
-        startButton.enabled = false;
-        startButton.GetComponent<Image>().enabled = false;
-        startButton.GetComponentInChildren<Text>().enabled = false;
-        EntryEnable(true);
+        roomPanel1.SetActive(false);
+        roomPanel2.SetActive(true);
     }
 
     // Setup the Game UI's
     void GameStartUISetup()
     {
-        EntryEnable(false);
-        playerText.enabled = true;
-        playerText.GetComponentInChildren<Image>().enabled = true;
-        timeText.enabled = true;
-        timeText.GetComponentInChildren<Image>().enabled = true;
-        cameraToggle.enabled = true;
-        cameraToggle.GetComponentInChildren<Image>().enabled = true;
-        cameraToggle.GetComponentInChildren<Text>().enabled = true;
-
         board.TimeModeGenerate();
         board.ObstacleModeUpdate();
+        roomPanel2.SetActive(false);
+        gamePanel.SetActive(true);
+        playerText.enabled = true;
+        timeText.enabled = true;
+        cameraButton.enabled = true;
+        cameraButton.GetComponentInChildren<RawImage>().enabled = true;
+        cameraButton.GetComponentInChildren<Text>().enabled = true;
+    }
 
+    public void Quit()
+    {
+        Application.Quit();
+    }
+
+    public void ResetPosition()
+    {
+        for (int i = 0; i < myPlayers.Length; ++i) {
+            if (currentCamera == myPlayers[i].currentCamera) {
+                myPlayers[i].PlayerReset();
+            }
+        }
+    }
+
+    public void MusicOption()
+    {
+        bgm.mute = !bgm.mute;
+        if (bgm.mute) {
+            musicButtonText.text = "Music\nOff";
+        } else {
+            musicButtonText.text = "Music\nOn";
+        }
+    }
+
+    public void SoundOption()
+    {
+        sound = !sound;
+        if (sound) {
+            soundButtonText.text = "Sound\nOn";
+        } else {
+            soundButtonText.text = "Sound\nOff";
+        }
+    }
+
+    public void MainStart()
+    {
+        mainPanel.SetActive(false);
+        roomPanel1.SetActive(true);
     }
 }

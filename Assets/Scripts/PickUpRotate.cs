@@ -14,7 +14,6 @@ public class PickUpRotate : MonoBehaviour {
 	
 	//reset size
 	public void Reset () {
-		print ("Reset");
 		currScale = 0;
 		transform.localScale = new Vector3 (currScale, currScale, currScale);
 	}

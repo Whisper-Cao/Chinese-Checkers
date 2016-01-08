@@ -4,7 +4,7 @@ using System.Collections;
 public class PlayerManager :PlayerAbstract
 {
 	public GameObject[] cameras;
-	Camera currentCamera;
+	public Camera currentCamera;
 	int currentCameraNum;
 	public Player player;
     GameManager gameManager;
@@ -42,10 +42,10 @@ public class PlayerManager :PlayerAbstract
 	{
 		player.isCurrentPlayer = flag;
 
-        if (gameManager.cameraToggle.isOn) {
+        /*if (gameManager.cameraButton.isOn) {
             if (currentCameraNum == 0)
                 ChangePerspective();
-        }
+        }*/
 
 		currentCamera.enabled = flag;
         currentCamera.GetComponent<AudioListener>().enabled = flag;

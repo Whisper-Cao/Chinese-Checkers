@@ -88,7 +88,7 @@ public class HoodleMove : MonoBehaviour
             //print("Notifymove before wait for jump");
             yield return StartCoroutine(WaitForJumpReady());
             AudioSource AS = GameObject.FindGameObjectWithTag("BallTouchSoundEffect").GetComponent<AudioSource>();
-            if (AS != null) {
+            if (AS != null && gameManager.sound) {
                 AS.Play();
             }
         }
@@ -171,7 +171,7 @@ public class HoodleMove : MonoBehaviour
             gameManager.SetTimeInterval(tmp);
 
             AudioSource AS = GameObject.FindGameObjectWithTag("HoodleMoveSoundEffect").GetComponent<AudioSource>();
-            if (AS != null) {
+            if (AS != null && gameManager.sound) {
                 AS.time = 1.0f;
                 AS.Play();
             }
