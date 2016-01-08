@@ -50,9 +50,19 @@ public class GameManager : MonoBehaviour
     //arrays for pickups for game mode
     private GameObject[] pickUp; //time mode
     private GameObject[] obstacle; //obstacle mode
+    public Queue roomList;
+    public object[] roomArray;
+    public int currentRoom;
+    public Button[] roomButtons;
+    public int roomPlayerNum;
+    private RandomMatchmaker networkManager;
 
+
+    private string roomName;
+    public Text roomNameText;
     private int playerNum;//the number of players
     private int AINum;
+    public Text showRoomNameText;
 
     [HideInInspector]
     public int timeInterval;
@@ -76,6 +86,10 @@ public class GameManager : MonoBehaviour
     public bool sound;
     private AudioSource bgm;
 
+    private GameObject port;
+    private PortInfo portInfo;
+    private int playerIDInRoom;
+
     void Start()
     {
         locker = true;
@@ -89,6 +103,7 @@ public class GameManager : MonoBehaviour
         cameraButton.GetComponentInChildren<RawImage>().enabled = false;
         cameraButton.GetComponentInChildren<Text>().enabled = false;
         board = GameObject.FindGameObjectWithTag("HoldBoard").GetComponent<Board>();
+        networkManager = GameObject.FindGameObjectWithTag("NetworkManager").GetComponent<RandomMatchmaker>();
 
         players = new PlayerAbstract[6];
         players[0] = orangePlayer = allPlayers[0].GetComponent<PlayerManager>();
@@ -138,8 +153,6 @@ public class GameManager : MonoBehaviour
         
 
         playerText.text = players[0].color;
-        timer = timeInterval;
-        timeText.text = (Mathf.CeilToInt(timer)).ToString();
 
         board.ClearCurrentHoodle();
         currentPlayer = 6;
@@ -149,6 +162,7 @@ public class GameManager : MonoBehaviour
         for (int i = 0; i < 6; i++) {
             playerTimeInterval[i] = timeInterval;
         }
+        
 
         //for delay
         delayLock = false;
@@ -162,6 +176,7 @@ public class GameManager : MonoBehaviour
         roomPanel2.SetActive(false);
         gamePanel.SetActive(false);
 
+        roomList = new Queue();
     }
 
     void Update()
@@ -221,9 +236,6 @@ public class GameManager : MonoBehaviour
             }
             playerText.text = players[currentPlayer].color;
             timer = playerTimeInterval[currentPlayer];
-            if (!maniaMode) {
-                timer += 5.0f;
-            }
             timeText.text = (Mathf.CeilToInt(timer)).ToString();
             board.ClearCurrentHoodle();
             locker = false;
@@ -289,6 +301,11 @@ public class GameManager : MonoBehaviour
     {
         GameStartUISetup();
 
+        if (IsHost()) {
+            SyncAction("start");
+        }
+
+
         switch (playerNum) {
             case 2:
                 orangePlayer.Initialize();
@@ -344,9 +361,6 @@ public class GameManager : MonoBehaviour
         currentPlayer = 0;
         board.ClearCurrentHoodle();
         players[currentPlayer].SetCurrent(true);
-        if (!maniaMode) {
-            timer += 5.0f;
-        }
         locker = false;
     }
 
@@ -441,13 +455,13 @@ public class GameManager : MonoBehaviour
             if (timer > playerTimeInterval[currentPlayer])
                 timer = playerTimeInterval[currentPlayer];
         } else {
-            if (timer > playerTimeInterval[currentPlayer] + 5)
-                timer = playerTimeInterval[currentPlayer] + 5;
+            if (timer > playerTimeInterval[currentPlayer])
+                timer = playerTimeInterval[currentPlayer];
         }
         locker = true;
         winPanel.enabled = true;
         winText.enabled = true;
-        winText.text = players[currentPlayer].color + " Time Set: " + (newTime + 5);
+        winText.text = players[currentPlayer].color + " Time Set: " + (newTime);
         delayLock = true;
         delayTimer = 1.5f;
     }
@@ -508,6 +522,9 @@ public class GameManager : MonoBehaviour
         cameraButton.enabled = true;
         cameraButton.GetComponentInChildren<RawImage>().enabled = true;
         cameraButton.GetComponentInChildren<Text>().enabled = true;
+
+        timer = timeInterval;
+        timeText.text = (Mathf.CeilToInt(timer)).ToString();
     }
 
     public void Quit()
@@ -599,6 +616,7 @@ public class GameManager : MonoBehaviour
     public void RoomPanel2Confirm()
     {
         if (AINum < playerNum) {
+            roomName = roomNameText.text;
             if (localMode) {
                 GameStart();
             } else {
@@ -642,6 +660,7 @@ public class GameManager : MonoBehaviour
     public void RoomPanel3Start()
     {
         GameStart();
+        
     }
 
     public void RoomPanel3Leave()
@@ -654,5 +673,281 @@ public class GameManager : MonoBehaviour
     {
         creditsPanel.SetActive(false);
         mainPanel.SetActive(true);
+    }
+
+    public void FifteenSeconds()
+    {
+        timeInterval = 15;
+        playerTimeInterval = new int[6];
+        for (int i = 0; i < 6; i++) {
+            playerTimeInterval[i] = timeInterval;
+        }
+    }
+
+    public void TwentySeconds()
+    {
+        timeInterval = 20;
+        playerTimeInterval = new int[6];
+        //print("TwentySeconds: playerTimeInterval.Length" + playerTimeInterval.Length);
+        for (int i = 0; i < 6; i++) {
+            playerTimeInterval[i] = timeInterval;
+        }
+    }
+
+    public void TwentyFiveSeconds()
+    {
+        timeInterval = 25;
+        playerTimeInterval = new int[6];
+        for (int i = 0; i < 6; i++) {
+            playerTimeInterval[i] = timeInterval;
+        }
+    }
+
+    public void ShowRoom()
+    {
+        roomArray = (roomList.ToArray());
+        currentRoom = 0;
+
+        if (roomArray.Length > currentRoom) {
+            roomButtons[0].GetComponentInChildren<Text>().text 
+                = TranslateRoomInfo((string) roomArray[currentRoom]);
+        }
+        if (roomArray.Length > 1 + currentRoom) {
+            roomButtons[0].GetComponentInChildren<Text>().text 
+                = TranslateRoomInfo((string )roomArray[currentRoom]);
+        }
+    }
+
+    public void RoomPanel1Left()
+    {
+        if (currentRoom >= 2) {
+            currentRoom -= 2;
+
+            if (roomArray.Length > currentRoom) {
+                roomButtons[0].GetComponentInChildren<Text>().text
+                    = TranslateRoomInfo((string) roomArray[currentRoom]);
+            }
+            if (roomArray.Length > 1 + currentRoom) {
+                roomButtons[0].GetComponentInChildren<Text>().text
+                    = TranslateRoomInfo((string) roomArray[currentRoom]);
+            }
+        }
+    }
+
+    public void RoomPanel1Right()
+    {
+        if (roomArray.Length > currentRoom + 2) {
+            currentRoom -= 2;
+
+            if (roomArray.Length > currentRoom) {
+                roomButtons[0].GetComponentInChildren<Text>().text
+                    = TranslateRoomInfo((string) roomArray[currentRoom]);
+            }
+            if (roomArray.Length > 1 + currentRoom) {
+                roomButtons[0].GetComponentInChildren<Text>().text
+                    = TranslateRoomInfo((string) roomArray[currentRoom]);
+            }
+        }
+    }
+
+    string TranslateRoomInfo(string info)
+    {
+        string[] parseInfo = info.Split();
+        string result = parseInfo[0] + "\n\n";
+        result += parseInfo[1] + " S, " + parseInfo[2] + " players, " + parseInfo[3] + " AI(s)\n";
+        bool flag = false;
+        if (parseInfo[4] == "true") {
+            result += "Time Mode";
+            flag =  true;
+        }
+        if (parseInfo[5] == "true") {
+            if (flag) {
+                result += ", Obstacle Mode";
+            } else {
+                result += "Obstacle Mode";
+            }
+            flag = true;
+        }
+        if (parseInfo[6] == "true") {
+            if (flag) {
+                result += ", Fly Mode";
+            } else {
+                result += "Fly Mode";
+            }
+            flag = true;
+        }
+        if (parseInfo[7] == "true") {
+            if (flag) {
+                result += ", Hint Mode";
+            } else {
+                result += "Hint Mode";
+            }
+            flag = true;
+        }
+        if (parseInfo[8] == "true") {
+            if (flag) {
+                result += ", Mania Mode";
+            } else {
+                result += "Mania Mode";
+            }
+            flag = true;
+        }
+        return result;
+        
+    }
+
+
+    public void RoomPanel1Select1()
+    {
+        if (roomArray.Length > currentRoom) {
+            JoinRoom((string) roomArray[currentRoom]);
+        }
+    }
+
+    public void RoomPanel1Select2()
+    {
+        if (roomArray.Length > currentRoom + 1) {
+            JoinRoom((string) roomArray[currentRoom + 1]);
+        }
+    }
+
+    public void setPort(GameObject port, PortInfo portInfo, int playerNum)
+    {
+        this.port = port;
+        this.portInfo = portInfo;
+        this.playerIDInRoom = playerNum;
+
+        Debug.Log("set port");
+
+        if (playerIDInRoom != 1) {
+            //GameModeChoiceDisable ();
+            //EntryEnable (false);
+        }
+    }
+
+    public void GameManagerReactOnNetwork(string action)
+    {
+        for (int i = 0; i < myPlayers.Length; ++i) {
+            myPlayers[i].PlayerReactOnNetwork(action);
+        }
+    }
+
+    public void SetModeAndStart(string action)
+    {
+        string[] actionParams = action.Split(' ');
+        timeMode = bool.Parse(actionParams[1]);
+        obstacleMode = bool.Parse(actionParams[2]);
+        flyMode = bool.Parse(actionParams[3]);
+        hintMode = bool.Parse(actionParams[4]);
+        maniaMode = bool.Parse(actionParams[5]);
+        playerNum = int.Parse(actionParams[6]);
+
+        GameModeChoiceDisable();
+
+        /*if (playerNum == 2)
+            TwoPlayerGameStart ();
+        else if (playerNum == 3)
+            ThreePlayersGameStart ();
+        else if (playerNum == 6)
+            SixPlayersGameStart ();*/
+    }
+
+    public void HostInitialObstacle(string action)
+    {
+        string[] actionParams = action.Split(' ');
+        int i = 1;
+        Debug.Log("start parse");
+        while (i < actionParams.Length) {
+            //SetObstaclePos (new Vector3 (float.Parse (actionParams [i]), float.Parse (actionParams [i + 1]), float.Parse (actionParams [i + 2])));
+            board.HostInitialObstacle(int.Parse(actionParams[i]), int.Parse(actionParams[i + 1]));
+            i += 2;
+        }
+        Debug.Log("end parse");
+    }
+
+    public void HostInitialTimer(string action)
+    {
+        string[] actionParams = action.Split(' ');
+        int i = 1;
+        while (i < actionParams.Length) {
+            //SetObstaclePos (new Vector3 (float.Parse (actionParams [i]), float.Parse (actionParams [i + 1]), float.Parse (actionParams [i + 2])));
+            board.HostInitialTimer(int.Parse(actionParams[i]), int.Parse(actionParams[i + 1]), int.Parse(actionParams[i + 2]), int.Parse(actionParams[i + 3]));
+            i += 4;
+        }
+    }
+
+    public void SyncAction(string action)
+    {
+        portInfo.AddActionSlot(action);
+        Debug.Log("syncing " + action);
+    }
+
+    public bool IsMyTurn()
+    {
+
+        return (playerIDInRoom * 3 - 3 == currentPlayer);
+    }
+
+    public bool IsHost()
+    {
+        return playerIDInRoom == 1;
+    }
+
+    public int DeterministicSetPickUpPos(Vector3 pos, int i, int time)
+    {
+        if (pickUp[i].activeSelf == false) {
+            pickUp[i].SetActive(true);
+            pickUp[i].transform.position = pos;
+            pickUp[i].GetComponent<PickUpRotate>().Reset();
+            pickUp[i].GetComponent<PickUpRotate>().time = time;
+            BoxCollider bc = pickUp[i].GetComponent<BoxCollider>();
+            bc.enabled = false;
+            return i;
+        }
+        return -1;
+    }
+
+    public string RoomInfomation()
+    {
+        return "" + roomName + " " + timeInterval + " " + playerNum + " " + AINum + " "
+            + timeMode + " " + obstacleMode + " " + flyMode + " " + hintMode + " " + maniaMode;
+    }
+
+    public void SetRoomInformation(string roomInfomation)
+    {
+        string[] roomInfomations = roomInfomation.Split(' ');
+        roomName = roomInfomations[0];
+        timeInterval = int.Parse(roomInfomations[1]);
+        playerNum = int.Parse(roomInfomations[2]);
+        AINum = int.Parse(roomInfomations[3]);
+        timeMode = bool.Parse(roomInfomations[4]);
+        obstacleMode = bool.Parse(roomInfomations[5]);
+        flyMode = bool.Parse(roomInfomations[6]);
+        hintMode = bool.Parse(roomInfomations[7]);
+        maniaMode = bool.Parse(roomInfomations[8]);
+    }
+
+    public void GetRoomListInLobby()
+    {
+        networkManager.RefreshRoomList(ref roomList);
+    }
+
+    public void CreateRoom()
+    {
+        networkManager.CreateRoom(RoomInfomation());
+    }
+
+    public void JoinRoom(string roomToJoin)
+    {
+        networkManager.JoinRoom(roomToJoin);
+        roomPanel1.SetActive(false);
+        roomPanel3.SetActive(true);
+    }
+
+    public void OnPlayerNumberChanges(int updatePlayerNumber)
+    {
+        roomPlayerNum = updatePlayerNumber;
+        //TODO
+        //Change the players shown in room
     }
 }

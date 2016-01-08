@@ -32,4 +32,6 @@ public abstract class PlayerAbstract : MonoBehaviour
     }
 
     abstract public void SetCurrent(bool flag);
+
+    abstract public void PlayerReactOnNetwork(string action);
 }

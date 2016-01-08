@@ -83,5 +83,12 @@ public class PlayerManager :PlayerAbstract
 	{
 	
 	}
+
+    public override void PlayerReactOnNetwork(string action)
+    {
+        for (int i = 0; i < hoodleMoves.Length; ++i) {
+            hoodleMoves[i].HoodleReactOnNetwork(action);
+        }
+    }
 }
 

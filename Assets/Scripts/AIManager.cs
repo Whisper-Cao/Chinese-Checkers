@@ -64,5 +64,12 @@ public class AIManager : PlayerAbstract
         cameras[0].GetComponent<Camera>().enabled = false;
         cameras[1].GetComponent<Camera>().enabled = false;
 	}
+
+    public override void PlayerReactOnNetwork(string action)
+    {
+        for (int i = 0; i < hoodleMoves.Length; ++i) {
+            hoodleMoves[i].HoodleReactOnNetwork(action);
+        }
+    }
 }
 

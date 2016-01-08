@@ -71,4 +71,14 @@ public class FloorLightController : MonoBehaviour
             particle.GetType().GetProperty("enabled").SetValue(particle, false, null);
         lightOn = false;
     }
+
+    public void LightReactOnNetwork(string action)
+    {
+        string[] actionParam = action.Split(' ');
+        Debug.Log("get cell clicked info");
+        if (int.Parse(actionParam[1]) == row && int.Parse(actionParam[2]) == col) {
+            Debug.Log("Let move");
+            StartCoroutine(playBoard.LetMove(new Vector3(transform.position.x, 0, transform.position.z), row, col));
+        }
+    }
 }

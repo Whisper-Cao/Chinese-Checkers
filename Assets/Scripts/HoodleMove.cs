@@ -17,6 +17,8 @@ public class HoodleMove : MonoBehaviour
     public Queue moveQueue;
     public int owner;
 
+    private bool self = false;
+
     //initialization 
     void Awake()
     {
@@ -63,7 +65,7 @@ public class HoodleMove : MonoBehaviour
 
     void OnMouseDown()
     {//when chosen, highlight
-        if (playBoard.UpdateCurrentHoodle(this, ((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry)) {
+        if (gameManager.IsMyTurn() && playBoard.UpdateCurrentHoodle(this, ((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry)) {
             if (((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry == true) {	// If it's the first try, change the status
                 ((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry = false;
                 ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX = this.GetOnBoardPos()[0];
@@ -163,11 +165,11 @@ public class HoodleMove : MonoBehaviour
         halo.GetType().GetProperty("enabled").SetValue(halo, false, null);
     }
 
-    void OnTriggerEnter(Collider other)
+    /*void OnTriggerEnter(Collider other)
     {
         if (other.gameObject.tag == "PickUp") {
             other.gameObject.SetActive(false);
-            int tmp = (int) Random.Range(5, 15);
+            int tmp = (int) Random.Range(gameManager.timeInterval - 7, gameManager.timeInterval + 3);
             gameManager.SetTimeInterval(tmp);
 
             AudioSource AS = GameObject.FindGameObjectWithTag("HoodleMoveSoundEffect").GetComponent<AudioSource>();
@@ -176,5 +178,22 @@ public class HoodleMove : MonoBehaviour
                 AS.Play();
             }
         }
+    }*/
+
+    public void HoodleReactOnNetwork(string action)
+    {
+        string[] actionParam = action.Split(' ');
+        if (int.Parse(actionParam[1]) == onBoardCoord[0] && int.Parse(actionParam[2]) == onBoardCoord[1] && !self)
+            if (playBoard.UpdateCurrentHoodle(this, ((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry)) {
+                if (((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry == true) {	// If it's the first try, change the status
+                    ((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry = false;
+                    ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX = this.GetOnBoardPos()[0];
+                    ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY = this.GetOnBoardPos()[1];
+                }
+                TurnOnHighlight();
+            }
+        pendingCollision = 0;
+        self = false;
     }
+
 }

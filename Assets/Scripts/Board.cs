@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using UnityEngine.UI;
 
 public class Board : MonoBehaviour
 {
@@ -10,7 +11,7 @@ public class Board : MonoBehaviour
     private Queue lightOnList;//all the light currently on
     private GameManager gameManager;
     public BoardCell[,] boardCells = new BoardCell[17, 17];//all board cells
- 
+
     //6 jump directions
     private int[][][] jumpDirections = new int[7][][];
     //6 move directions
@@ -24,6 +25,7 @@ public class Board : MonoBehaviour
     public int[][] currPos = new int[10][];//[棋子标号][x/y]
     public int chosenHoodle = -1;
     public int[] possibleNum = new int[10];
+
 
     private int[][][] finalPos = new int[6][][];//record the wanted final position
     private int[][][] initialPos = new int[6][][];
@@ -132,11 +134,10 @@ public class Board : MonoBehaviour
             TurnOffAllPossible();
 
             if (!gameManager.maniaMode && !isTheFirstTry) {		// If in normal mode & not the first try
-                if (currentHoodle.GetOnBoardPos()[0] == 
+                if (currentHoodle.GetOnBoardPos()[0] ==
                     ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX
-                    && currentHoodle.GetOnBoardPos()[1] == 
-                    ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY) 
-                { // Check undos
+                    && currentHoodle.GetOnBoardPos()[1] ==
+                    ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY) { // Check undos
                     ((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry = true;
                     ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX = -1;
                     ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX = -1;
@@ -344,29 +345,28 @@ public class Board : MonoBehaviour
         }
         boardCells[hoodleCoord[0], hoodleCoord[1]].cellOccupied = true;
 
-        if (isTheFirstTry) { 		// Only consider moves if this is the first 'move'
+        if (isTheFirstTry || gameManager.maniaMode) { 		// Only consider moves if this is the first 'move'
             for (int i = 0; i < 6; ++i) {
                 SearchWalkDirection(hoodleCoord, walkDirections[i]);
             }
         } else {						// Needs to add the last pos to undo
-            if (!gameManager.maniaMode) {
-                boardCells[((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX,
-                           ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY].bounceQueue = new Queue();
-                boardCells[((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX,
-                           ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY].bounceQueue.Enqueue
-                    (
-                        new int[2] { ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX,
+            boardCells[((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX,
+                       ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY].bounceQueue = new Queue();
+            boardCells[((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX,
+                       ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY].bounceQueue.Enqueue
+                (
+                    new int[2] { ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX,
                             ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY }
-                    );
-                boardCells[((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX,
-                           ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY].isJumpDestination = false;
+                );
+            boardCells[((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX,
+                       ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY].isJumpDestination = false;
 
-                arrivableList.Enqueue
-                    (
-                        new int[2] { ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX,
+            arrivableList.Enqueue
+                (
+                    new int[2] { ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX,
                             ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY }
-                    );
-            }
+                );
+
         }
 
         while (arrivableList.Count > 0) {
@@ -404,6 +404,8 @@ public class Board : MonoBehaviour
     {
         //add more pickUps
         //only try 10 time, if still fails, the give up
+        if (!gameManager.IsHost())
+            return;
         for (int k = 0; k < 10; k++) {
             //generate at white space
             if (!gameManager.timeMode)
@@ -416,17 +418,23 @@ public class Board : MonoBehaviour
                 j = (int) Random.Range(i - 4, 13);
             if (boardCells[i, j] != null && !boardCells[i, j].cellOccupied && boardCells[i, j].withPickUps == -1) {
                 Vector3 pos = new Vector3(boardCells[i, j].cellPos.x, 0.3f, boardCells[i, j].cellPos.y);
-                boardCells[i, j].withPickUps = gameManager.SetPickUpPos(pos);
+                int result = gameManager.SetPickUpPos(pos);
+                boardCells[i, j].withPickUps = result == -1 ? -1 : result / 16;
+                if (boardCells[i, j].withPickUps != -1) {
+                    gameManager.SyncAction("timer " + i + " " + j + " " + boardCells[i, j].withPickUps + " " + result % 16);
+                }
                 return;
             }
         }
     }
 
+
     public void ObstacleModeUpdate()
     {
-        if (!gameManager.obstacleMode)
+        if (!gameManager.obstacleMode || !gameManager.IsHost())
             return;
         int num = (int) Random.Range(2, 6);
+        string putObstacle = "obstacle";
         for (int k = 0; k < num; k++) {
             for (int kk = 0; kk < 10; kk++) {
                 //generate at white space
@@ -438,6 +446,7 @@ public class Board : MonoBehaviour
                     j = (int) Random.Range(i - 4, 13);
                 if (boardCells[i, j] != null && !boardCells[i, j].cellOccupied && boardCells[i, j].withPickUps == -1) {
                     Vector3 pos = new Vector3(boardCells[i, j].cellPos.x, 0, boardCells[i, j].cellPos.y);
+                    putObstacle += " " + i + " " + j;
                     gameManager.SetObstaclePos(pos);
                     boardCells[i, j].cellOccupied = true;
 
@@ -445,7 +454,10 @@ public class Board : MonoBehaviour
                 }
             }
         }
+
+        gameManager.SyncAction(putObstacle);
     }
+
 
     public void ActionForAI()
     {
@@ -1140,5 +1152,26 @@ public class Board : MonoBehaviour
         desLevel[9][13] = 4;
     }
 
+    public void BoardReactOnNetwork(string action)
+    {
+        for (int i = 0; i < 17; ++i)
+            for (int j = 0; j < 17; ++j) {
+                if (boardCells[i, j] != null)
+                    boardCells[i, j].lightManager.LightReactOnNetwork(action);
+            }
+    }
+
+    public void HostInitialObstacle(int i, int j)
+    {
+        Vector3 pos = new Vector3(boardCells[i, j].cellPos.x, 0, boardCells[i, j].cellPos.y);
+        gameManager.SetObstaclePos(pos);
+        boardCells[i, j].cellOccupied = true;
+    }
+
+    public void HostInitialTimer(int i, int j, int pickUpId, int time)
+    {
+        Vector3 pos = new Vector3(boardCells[i, j].cellPos.x, 0.3f, boardCells[i, j].cellPos.y);
+        boardCells[i, j].withPickUps = gameManager.DeterministicSetPickUpPos(pos, pickUpId, time);
+    }
 }
 
