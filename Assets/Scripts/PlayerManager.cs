@@ -6,7 +6,6 @@ public class PlayerManager :PlayerAbstract
 	public Camera currentCamera;
 	int currentCameraNum;
 	public Player player;
-    GameManager gameManager;
 
     //In normal mode, whether the selection of one hoodle is the first try of the player
     public bool isTheFirstTry;
