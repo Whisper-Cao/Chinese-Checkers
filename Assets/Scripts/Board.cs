@@ -1196,4 +1196,3 @@ public class Board : MonoBehaviour
         boardCells[i, j].withPickUps = gameManager.DeterministicSetPickUpPos(pos, pickUpId, time);
     }
 }
-

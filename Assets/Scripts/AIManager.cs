@@ -5,17 +5,17 @@ public class AIManager : PlayerAbstract
 {
     private Board board;
 
-	// Use this for initialization
-	void Start()
-	{
-	
-	}
-	
-	// Update is called once per frame
-	void Update()
-	{
-	    
-	}
+    // Use this for initialization
+    void Start()
+    {
+
+    }
+
+    // Update is called once per frame
+    void Update()
+    {
+
+    }
 
     override public void SetCurrent(bool flag)
     {
@@ -47,7 +47,7 @@ public class AIManager : PlayerAbstract
                     //if (board.currentHoodle == null) Debug.Log("error!");
                     for (int i = 0; i < 10000000; ++i)
                         ;
-                        StartCoroutine(board.LetMoveAI(new Vector3(1, 2, 3), desX, desY, chosen));
+                    StartCoroutine(board.LetMoveAI(new Vector3(1, 2, 3), desX, desY, chosen));
                     //StartCoroutine(AISleepAction(currX, currY, desX, desY, chosen));
                     gameManager.SyncAction("AIMove " + currX + " " + currY + " " + desX + " " + desY + " " + chosen);
                 }
@@ -63,21 +63,21 @@ public class AIManager : PlayerAbstract
     }*/
 
 
-	override public void Link()
-	{
+    override public void Link()
+    {
         board = GameObject.FindGameObjectWithTag("HoldBoard").GetComponent<Board>();
         gameManager = GameObject.FindGameObjectWithTag("PlayBoard").GetComponent<GameManager>();
 
-		hoodles = GameObject.FindGameObjectsWithTag("Player" + color);
-		hoodleMoves = new HoodleMove[10];
-		for (int i = 0; i < hoodles.Length; ++i) {
-			hoodleMoves[i] = hoodles[i].GetComponent<HoodleMove>();
+        hoodles = GameObject.FindGameObjectsWithTag("Player" + color);
+        hoodleMoves = new HoodleMove[10];
+        for (int i = 0; i < hoodles.Length; ++i) {
+            hoodleMoves[i] = hoodles[i].GetComponent<HoodleMove>();
             hoodleMoves[i].owner = playerNumber;
-		}
+        }
 
         cameras[0].GetComponent<Camera>().enabled = false;
         cameras[1].GetComponent<Camera>().enabled = false;
-	}
+    }
 
     public override void PlayerReactOnNetwork(string action)
     {
@@ -89,4 +89,3 @@ public class AIManager : PlayerAbstract
         return true;
     }
 }
-
