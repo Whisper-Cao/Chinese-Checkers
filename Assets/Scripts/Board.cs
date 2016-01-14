@@ -468,7 +468,7 @@ public class Board : MonoBehaviour
         gameManager.SyncAction(putObstacle);
     }
 
-
+    /*
     public void ActionForAI()
     {
         for (int i = 0; i < 10; i++) {
@@ -496,7 +496,7 @@ public class Board : MonoBehaviour
             chosenHoodle = 0;
         }
     }
-
+    
     public IEnumerator LetMoveAI(Vector3 desPos, int row, int col, int label)
     {
         bool win = false;
@@ -590,12 +590,6 @@ public class Board : MonoBehaviour
             if (label != -1) {
                 boardCells[root[0] + dir[0], root[1] + dir[1]].bounceQueueOfAI[label] = (Queue) boardCells[root[0], root[1]].bounceQueueOfAI[label].Clone();
                 boardCells[root[0] + dir[0], root[1] + dir[1]].bounceQueueOfAI[label].Enqueue(new int[2] { root[0] + dir[0], root[1] + dir[1] });
-                /*
-                Debug.Log("begin");
-                Debug.Log(root[0]+" " + root[1]);
-                Debug.Log((root[0] + dir[0]) + " " + (root[1]+dir[1]));
-                Debug.Log("label:" + label + " " + boardCells[root[0] + dir[0], root[1] + dir[1]].bounceQueueOfAI[label].Count);
-                */
             }
             int[] tmp = new int[2] { root[0] + dir[0], root[1] + dir[1] };
             if (!arrivableList.Contains(tmp)) {
@@ -744,10 +738,6 @@ public class Board : MonoBehaviour
         //确定目的地
         desXOfAI = possiblePos[myChoice][optionalQueue[index][1]][0];
         desYOfAI = possiblePos[myChoice][optionalQueue[index][1]][1];
-        /*
-        if (InDes(desXOfAI, desYOfAI)) finalPosState[desYOfAI][desYOfAI] = 1;//如果目的地在终营，设置该位置的状态为1
-        finalPosState[currPos[myChoice][0]][currPos[myChoice][1]] = 0;//设置现在的位置为0
-        */
 
         //gameManager.SyncAction("AIHoodle " + myChoice);
         //gameManager.SyncAction("AICell " + desXOfAI + " " + desYOfAI);
@@ -1173,6 +1163,12 @@ public class Board : MonoBehaviour
         desLevel[10][13] = 4;
         desLevel[9][13] = 4;
     }
+    */
+
+
+
+
+
 
     public void BoardReactOnNetwork(string action)
     {
@@ -1195,4 +1191,830 @@ public class Board : MonoBehaviour
         Vector3 pos = new Vector3(boardCells[i, j].cellPos.x, 0.3f, boardCells[i, j].cellPos.y);
         boardCells[i, j].withPickUps = gameManager.DeterministicSetPickUpPos(pos, pickUpId, time);
     }
+
+
+
+    public IEnumerator LetMoveAI(Vector3 desPos, int row, int col, int label)
+    {
+        bool flag = false;
+        if (currentHoodle != null) {
+            boardCells[(int) currentHoodle.GetOnBoardPos()[0], (int) currentHoodle.GetOnBoardPos()[1]].cellOccupied = false;
+            boardCells[row, col].cellOccupied = true;
+            //
+            boardCells[row, col].hoodle = boardCells[(int) currentHoodle.GetOnBoardPos()[0], (int) currentHoodle.GetOnBoardPos()[1]].hoodle;
+            boardCells[(int) currentHoodle.GetOnBoardPos()[0], (int) currentHoodle.GetOnBoardPos()[1]].hoodle = null;
+            boardCells[row, col].hoodlePlayer = boardCells[(int) currentHoodle.GetOnBoardPos()[0], (int) currentHoodle.GetOnBoardPos()[1]].hoodlePlayer;
+            boardCells[(int) currentHoodle.GetOnBoardPos()[0], (int) currentHoodle.GetOnBoardPos()[1]].hoodlePlayer = -1;
+            //
+            int playerNum = currentHoodle.owner;
+            if (playerNum == boardCells[row, col].destinationPlayer) {
+                ++arrivalCounters[playerNum];
+                if (arrivalCounters[playerNum] == 10) {
+                    flag = true;
+                }
+            }
+
+
+            if (playerNum == boardCells[(int) currentHoodle.GetOnBoardPos()[0], (int) currentHoodle.GetOnBoardPos()[1]].destinationPlayer)
+                --arrivalCounters[playerNum];
+            currentHoodle.SetCoordinate(row, col);
+            //send movements according to the bounce queue
+            if (gameManager.currentPlayer == 0) {
+                while (boardCells[row, col].bounceQueue.Count > 0) {
+                    int[] nextPos = (int[]) boardCells[row, col].bounceQueue.Dequeue();
+                    Vector2 twodPos = boardCells[nextPos[0], nextPos[1]].cellPos;
+                    currentHoodle.moveQueue.Enqueue(new Vector3(twodPos.x, 0, twodPos.y));
+                    //check for time mode
+                    TimeModeUpdate(nextPos[0], nextPos[1]);
+                }
+            } else if (label != -1) {
+                while (boardCells[row, col].bounceQueueOfAI[label].Count > 0) {
+                    int[] nextPos = (int[]) boardCells[row, col].bounceQueueOfAI[label].Dequeue();
+                    Vector2 twodPos = boardCells[nextPos[0], nextPos[1]].cellPos;
+                    currentHoodle.moveQueue.Enqueue(new Vector3(twodPos.x, 0, twodPos.y));
+                    //check for time mode
+                    TimeModeUpdate(nextPos[0], nextPos[1]);
+                }
+            }
+
+            //TurnOffAllPoss();
+            yield return StartCoroutine(currentHoodle.NotifyMove());
+
+            if (flag) {
+                gameManager.Win(gameManager.players[gameManager.currentPlayer].color);
+            } else {
+                //currentHoodle.ResumeState();
+                //currentHoodle.TurnOffHighlight();
+                currentHoodle = null;
+                //Debug.log("can go into next");
+                gameManager.nextPlayer();
+            }
+            //check for time mode
+            //UpdateGameMode(row, col);
+        }
+    }
+
+    void SearchJumpDirectionAI(int[] root, int[] dir, ref bool[,] possState, ref Queue searchQueue, int label)
+    {
+
+        int step = (int) (Mathf.Max(Mathf.Abs(dir[0]), Mathf.Abs(dir[1])));
+
+        if (!(dir[0] >= 0 && root[0] + dir[0] < 17 || dir[0] < 0 && root[0] + dir[0] >= 0))
+            return;
+
+        if (!(dir[1] >= 0 && root[1] + dir[1] < 17 || dir[1] < 0 && root[1] + dir[1] >= 0))
+            return;
+
+        for (int i = 1; i < step / 2; ++i) {
+            if (!(boardCells[root[0] + dir[0] / step * i, root[1] + dir[1] / step * i] != null && !boardCells[root[0] + dir[0] / step * i, root[1] + dir[1] / step * i].cellOccupied))
+                return;
+        }
+
+        for (int i = step / 2 + 1; i < step; ++i) {
+            if (!(boardCells[root[0] + dir[0] / step * i, root[1] + dir[1] / step * i] != null && !boardCells[root[0] + dir[0] / step * i, root[1] + dir[1] / step * i].cellOccupied))
+                return;
+        }
+
+        if (boardCells[root[0] + dir[0], root[1] + dir[1]] != null &&
+           boardCells[root[0] + dir[0] / 2, root[1] + dir[1] / 2].cellOccupied &&
+           !boardCells[root[0] + dir[0], root[1] + dir[1]].cellOccupied &&
+           !possState[root[0] + dir[0], root[1] + dir[1]]) {
+
+            searchQueue.Enqueue(root);
+            possState[root[0] + dir[0], root[1] + dir[1]] = true;
+            boardCells[root[0] + dir[0], root[1] + dir[1]].bounceQueue = (Queue) boardCells[root[0], root[1]].bounceQueue.Clone();
+            boardCells[root[0] + dir[0], root[1] + dir[1]].bounceQueue.Enqueue(new int[2] { root[0] + dir[0], root[1] + dir[1] });
+            if (label != -1) {
+                boardCells[root[0] + dir[0], root[1] + dir[1]].bounceQueueOfAI[label] = (Queue) boardCells[root[0], root[1]].bounceQueueOfAI[label].Clone();
+                boardCells[root[0] + dir[0], root[1] + dir[1]].bounceQueueOfAI[label].Enqueue(new int[2] { root[0] + dir[0], root[1] + dir[1] });
+                /*
+                //Debug.log("begin");
+                //Debug.log(root[0]+" " + root[1]);
+                //Debug.log((root[0] + dir[0]) + " " + (root[1]+dir[1]));
+                //Debug.log("label:" + label + " " + boardCells[root[0] + dir[0], root[1] + dir[1]].bounceQueueOfAI[label].Count);
+                */
+            }
+            int[] tmp = new int[2] { root[0] + dir[0], root[1] + dir[1] };
+            if (!arrivableList.Contains(tmp)) {
+                arrivableList.Enqueue(tmp);
+                searchQueue.Enqueue(tmp);
+            }
+
+        }
+    }
+
+    //check for valid destination cells for a move
+    void SearchWalkDirectionAI(int[] hoodleCoord, int[] dir, int label)
+    {
+
+        if (!((dir[0] >= 0 && hoodleCoord[0] + dir[0] < 17) || (dir[0] < 0 && hoodleCoord[0] + dir[0] >= 0)))
+            return;
+
+        if (!((dir[1] >= 0 && hoodleCoord[1] + dir[1] < 17) || (dir[1] < 0 && hoodleCoord[1] + dir[1] >= 0)))
+            return;
+
+        if (boardCells[(int) hoodleCoord[0] + dir[0], (int) hoodleCoord[1] + dir[1]] != null &&
+           !boardCells[(int) hoodleCoord[0] + dir[0], (int) hoodleCoord[1] + dir[1]].cellOccupied &&
+           boardCells[(int) hoodleCoord[0] + dir[0], (int) hoodleCoord[1] + dir[1]].lightManager != null) {
+            boardCells[(int) hoodleCoord[0] + dir[0], (int) hoodleCoord[1] + dir[1]].bounceQueue = new Queue();
+            boardCells[(int) hoodleCoord[0] + dir[0], (int) hoodleCoord[1] + dir[1]].bounceQueue.Enqueue(new int[2] { hoodleCoord[0] + dir[0], hoodleCoord[1] + dir[1] });
+            if (label != -1) {
+                boardCells[(int) hoodleCoord[0] + dir[0], (int) hoodleCoord[1] + dir[1]].bounceQueueOfAI[label] = new Queue();
+                boardCells[(int) hoodleCoord[0] + dir[0], (int) hoodleCoord[1] + dir[1]].bounceQueueOfAI[label].Enqueue(new int[2] { hoodleCoord[0] + dir[0], hoodleCoord[1] + dir[1] });
+            }
+            arrivableList.Enqueue(new int[2] { hoodleCoord[0] + dir[0], hoodleCoord[1] + dir[1] });
+        }
+    }
+
+    //search all the valid destination cells of currentHoodle
+    public void SearchMovableAI(int[] hoodleCoord, int label)
+    {
+        Queue searchQueue = new Queue();
+        int[] root;
+        int length = 0;
+        searchQueue.Enqueue(hoodleCoord);
+        bool[,] possState = new bool[17, 17];
+
+        for (int i = 0; i < 17; ++i)
+            for (int j = 0; j < 17; ++j)
+                possState[i, j] = false;
+
+        for (int i = 0; i < 17; ++i)
+            for (int j = 0; j < 17; ++j) {
+                if (boardCells[i, j] != null) {
+                    boardCells[i, j].bounceQueue.Clear();
+                    if (label != -1) {
+                        boardCells[i, j].bounceQueueOfAI[label].Clear();
+                    }
+                }
+            }
+
+        boardCells[hoodleCoord[0], hoodleCoord[1]].cellOccupied = false;
+        while (searchQueue.Count != 0) {
+            root = (int[]) searchQueue.Dequeue();
+            if (!gameManager.flyMode) {
+                print("Normal Search");
+                for (int i = 0; i < 6; ++i)
+                    SearchJumpDirectionAI(root, jumpDirections[0][i], ref possState, ref searchQueue, label);
+            } else
+                for (int s = 0; s < 6; ++s)
+                    for (int i = 0; i < 6; ++i) {
+                        SearchJumpDirectionAI(root, jumpDirections[s][i], ref possState, ref searchQueue, label);
+                    }
+        }
+        boardCells[hoodleCoord[0], hoodleCoord[1]].cellOccupied = true;
+
+        for (int i = 0; i < 6; ++i) {
+            SearchWalkDirectionAI(hoodleCoord, walkDirections[i], label);
+        }
+
+
+
+        //if(label != -1 )//Debug.log("label: " + label + "count:" + boardCells[4, 4].bounceQueueOfAI[label].Count);
+        while (arrivableList.Count > 0) {
+            int[] possibleCell = (int[]) arrivableList.Dequeue();
+            if (label != -1) {
+                possiblePos[label][length][0] = possibleCell[0];
+                possiblePos[label][length][1] = possibleCell[1];
+                length++;
+                possibleNum[label]++;
+            }
+            if (boardCells[possibleCell[0], possibleCell[1]].lightManager != null) {
+                lightOnList.Enqueue(possibleCell);
+                boardCells[possibleCell[0], possibleCell[1]].lightManager.TurnOnHighLight();
+            }
+        }
+    }
+
+    public int ChooseAlgorithm()
+    {
+        int myChoice = 0;
+        int[][] optionalQueue = new int[10][];//0位置存放是第几个棋子(label)，1位置存放是棋子的第几种走法(index)(存储着所有的可能性),2存放的是该走法与终营的距离
+        int[][] attribute = new int[10][];//0存储是否可以跳出本营，2存储在直线距离上跳多远(有效步长)
+        int optionalLength = 0;
+        int indexOfMax = 0;
+        int leftPlaces = 0;
+        int[] leftArray = new int[10];//finalPos的下标集合
+        double[] disOfAllHoodles = new double[10];
+
+        for (int i = 0; i < 10; i++) {
+            optionalQueue[i] = new int[3];
+            attribute[i] = new int[5];
+        }
+        for (int i = 0; i < 10; i++) {
+            if (finalPosState[gameManager.currentPlayer][i] == 0) {
+                leftArray[leftPlaces] = i;
+                leftPlaces++;
+            }
+        }
+        //对每个棋子选择其最合适的路
+        for (int i = 0; i < 10; i++) {
+            if (possibleNum[i] != 0) {
+                if (leftPlaces > 2) {
+                    Debug.Log("大于2" + System.DateTime.Now.Millisecond.ToString());
+                    optionalQueue[optionalLength][0] = i;
+                    indexOfMax = chooseIndex(i, disOfAllHoodles);
+                    optionalQueue[optionalLength][1] = indexOfMax;
+                    optionalLength++;
+                } else {
+                    Debug.Log("小于2" + System.DateTime.Now.Millisecond.ToString());
+                    optionalQueue[optionalLength][0] = i;
+                    indexOfMax = chooseIndexLessThanTwo(i, leftPlaces, leftArray, disOfAllHoodles);
+                    optionalQueue[optionalLength][1] = indexOfMax;
+                    optionalLength++;
+                }
+            }
+        }
+
+        //选择棋子
+        int index = 0, tmpLabel = 0, tmpIndex = 0;
+        ;
+        double[] currPosAttribute = new double[10];
+
+        for (int i = 0; i < optionalLength; i++) {
+            tmpLabel = optionalQueue[i][0];
+            tmpIndex = optionalQueue[i][1];
+            //检查是否可以跳出本营,能跳出的具有最高优先级
+            attribute[i][0] = CanJumpOut(tmpLabel, tmpIndex);
+            //录入棋子现在的位置属性
+            currPosAttribute[i] = calcDisFromCurrentPos(tmpLabel) + calcBiasFromCurrentPos(tmpLabel);//
+            //检查棋子是否可以跳入终营
+            attribute[i][3] = CanJumpIn(tmpLabel, tmpIndex);
+            //检查棋子是不是在终营
+            if (InDes(currPos[optionalQueue[i][0]][0], currPos[optionalQueue[i][0]][1]) != -1) {
+                attribute[i][4] = 1;
+            } else
+                attribute[i][4] = 0;
+        }
+        //综合四个属性选棋子
+        index = chooseHoodle(attribute, optionalQueue, optionalLength, disOfAllHoodles, currPosAttribute);//index是选的棋子在optianalQueue里的位置
+        myChoice = optionalQueue[index][0];
+        //确定目的地
+        desXOfAI = possiblePos[myChoice][optionalQueue[index][1]][0];
+        desYOfAI = possiblePos[myChoice][optionalQueue[index][1]][1];
+        /*
+        if (InDes(desXOfAI, desYOfAI)) finalPosState[desYOfAI][desYOfAI] = 1;//如果目的地在终营，设置该位置的状态为1
+        finalPosState[currPos[myChoice][0]][currPos[myChoice][1]] = 0;//设置现在的位置为0
+        */
+        //维护最终位置的状态
+        int desIndexInFinalPosState = InDes(desXOfAI, desYOfAI),
+            currIndexInFinalPosState = InDes(currPos[myChoice][0], currPos[myChoice][1]);
+        if (desIndexInFinalPosState != -1)
+            finalPosState[gameManager.currentPlayer][desIndexInFinalPosState] = 1;
+        if (currIndexInFinalPosState != -1)
+            finalPosState[gameManager.currentPlayer][currIndexInFinalPosState] = 0;
+        Debug.Log("des: (" + desXOfAI + "," + desYOfAI + ")    " + "curr: (" + currPos[myChoice][0] + "," + currPos[myChoice][1] + ")" + System.DateTime.Now.Millisecond.ToString());
+        return myChoice;
+    }//选择算法分两步，先找到每个棋子对应的最优解，再找到最优棋子,调用chooseIndex()和chooseHoodle()
+
+    public int chooseHoodle(int[][] attribute, int[][] optionalQueue, int length, double[] disOfAllHoodles, double[] currPosAttribute)//用权值选择合适的棋子，返回的是该棋子在optianalQueue里的位置（不是该棋子的标号）
+    {
+        int indexOfMyChoice = 0;
+        double[] weight = new double[10];
+        int tmpLabel = 0, tmpIndex = 0, dif = 0;
+        double max = -10000;
+        //for (int i = 0; i < 10; i++) //Debug.log("label = " + i + "distance:" + disOfAllHoodles[i]);
+        Debug.Log("有" + length + "个棋子可以走");
+        for (int i = 0; i < length; i++)//这里的i不是棋子的标号，optionalQueue[i][0]才是
+        {
+            tmpLabel = optionalQueue[i][0];
+            tmpIndex = optionalQueue[i][1];
+            if (attribute[i][0] == 1)//如果可以跳出本营，权重加1000
+                weight[i] += 1000;
+            if (attribute[i][3] == 1)//如果可以跳入终营，权重加500
+            {
+                weight[i] += 500;
+            }
+            //原来在终营且可以深入
+            if (InDes(currPos[tmpLabel][0], currPos[tmpLabel][1]) != -1 && CanGoFurther(tmpLabel, tmpIndex) == 1) {
+                weight[i] += 30;
+                //Debug.log("可以深入");
+            }
+                //原来在终营但不能深入
+            else if (InDes(currPos[tmpLabel][0], currPos[tmpLabel][1]) != -1 && CanGoFurther(tmpLabel, tmpIndex) == 0) {
+                weight[i] -= 500;
+                //Debug.log("不能深入");
+            }
+            //一个是i一个是label
+            weight[i] += 40 * currPosAttribute[i];
+            weight[i] += 10 * disOfAllHoodles[tmpLabel];
+
+            dif = calcDistance(tmpLabel, tmpIndex);//如果跳的地方相对于当时的位置而言是“后退的”，那么权重减3000
+
+            if (dif < 0 || (currPos[tmpLabel][0] == possiblePos[tmpLabel][tmpIndex][0] && currPos[tmpLabel][1] == possiblePos[tmpLabel][tmpIndex][1])) {
+
+                weight[i] -= 3000;
+            }
+            //else if (dif == 0) weight[i] -= 20;
+
+            Debug.Log("Label:" + tmpLabel + "curr: (" + currPos[tmpLabel][0] + "," + currPos[tmpLabel][1] + ") des: " + "(" + possiblePos[tmpLabel][tmpIndex][0] + "," + possiblePos[tmpLabel][tmpIndex][1] + ") " + " weight:" + weight[i] + "有效步长:" + disOfAllHoodles[tmpLabel] + "  起始位置到目的地的距离" + currPosAttribute[i] + System.DateTime.Now.Millisecond.ToString());
+
+        }
+        for (int i = 0; i < length; i++) {
+            if (weight[i] > max) {
+                max = weight[i];
+                indexOfMyChoice = i;
+            }
+        }
+        return indexOfMyChoice;
+    }
+
+    /*
+    public int chooseIndexWhenLess(int label)
+    {
+        int index,dif,x,y,finaltmpx,finaltmpy,n = 0;
+        int[] leftPlace = new int[4];
+        //找到剩下的空位置
+        for (int i = 0; i < 10; i++)
+        {
+            if(finalPosState[gameManager.currentPlayer][i] == 0)
+            {
+                leftPlace[n++] = i;
+            }
+        }
+        for (int i = 0; i < possibleNum[label]; i++)
+        {
+            for(int j = 0; j < 4; j++)
+            {
+                finaltmpx = finalPos[gameManager.currentPlayer][leftPlace[j]][0];
+                finaltmpy = finalPos[gameManager.currentPlayer][leftPlace[j]][1];
+                x = possiblePos[gameManager.currentPlayer][label][0];
+                y = possiblePos[gameManager.currentPlayer][label][1];
+                dif = System.Math.Abs(x-finaltmpx)- System.Math.Abs(y - finaltmpy);
+            }
+        }
+        
+
+        
+    }*/
+
+    public int chooseIndex(int label, double[] disOfAllHoodles)//找到每个棋子最合适的目的地，返回一个数组array,array[0]表示该棋子的下标,array[1]表示与终营的距离
+    {
+        //对每个棋子选择目的地时的原则：
+        //1.不允许棋子踏入设定的禁区（每方的最后两排） 2.离终营越近越好
+        int currX = currPos[label][0],
+            currY = currPos[label][1],
+            disFromInit,
+            maxIndex = 0;
+
+        double bias, minBias = 100;
+        double lastValue, maxValue = -1000, maxLastValue = -1000;
+        int[] array = new int[2];
+        double tmpDis = 0, tmpbias = 0;
+        for (int i = 0; i < possibleNum[label]; i++) {
+            if (WillJumpToBanned(label, i) == 1)
+                continue;//不允许将禁区设为destination
+            disFromInit = calcDistance(label, i);//越大越好
+            bias = calcBias(label, i);//越小越好
+            if (disFromInit < 0)
+                disFromInit -= 5;//排除后退的情况
+            lastValue = disFromInit - bias;
+            if (lastValue > maxValue) {
+                tmpDis = disFromInit;
+                tmpbias = bias;
+                maxValue = lastValue;
+                minBias = bias;
+                maxIndex = i;
+            }
+            /*
+            if (disFromInit > maxValue)
+            {
+                maxValue = disFromInit;
+                minBias = bias;
+                maxIndex = i;       
+            }
+            //当两个value相等的时候，优先选择比较中间的
+            else if (disFromInit == maxValue)
+            {
+                if(bias < minBias)
+                {
+                    minBias = bias;
+                    maxIndex = i;
+                }
+            }*/
+        }
+        //Debug.log("Label: " + label + "dis:" + tmpDis + "bias:" + tmpbias + " maxValue:" + maxValue);
+        disOfAllHoodles[label] = maxValue;
+        return maxIndex;
+    }
+
+    public int chooseIndexLessThanTwo(int label, int leftPlaces, int[] leftArray, double[] disOfAllHoodles)
+    {
+        bool flag = false;
+        int cx, cy, dx, dy, dx0, dy0, dis;
+        int minValue = 100, minIndex = 0, mindes = 5;
+        cx = currPos[label][0];
+        cy = currPos[label][1];
+        for (int i = 0; i < possibleNum[label]; i++) {
+            if (WillJumpToBanned(label, i) == 1)
+                continue;
+            if (InDes(cx, cy) == -1)//不在里面
+            {
+                dx = possiblePos[label][i][0];
+                dy = possiblePos[label][i][1];
+                for (int j = 0; j < leftPlaces; j++) {
+                    dx0 = finalPos[gameManager.currentPlayer][leftArray[j]][0];
+                    dy0 = finalPos[gameManager.currentPlayer][leftArray[j]][1];
+                    Debug.Log("Label:" + label + " dx0: " + dx0 + " dy0: " + dy0);
+                    dis = System.Math.Abs(dx0 - dx) + System.Math.Abs(dy0 - dy);
+                    if (dis < minValue) {
+                        minValue = dis;
+                        minIndex = i;
+                    }
+                }
+            } else//在里面
+            {
+                dx = possiblePos[label][i][0];
+                dy = possiblePos[label][i][1];
+                if (desLevel[cx][cy] != 4 && desLevel[dx][dy] < desLevel[cx][cy] && desLevel[dx][dy] < mindes) {
+                    flag = true;
+                    minIndex = i;
+                    mindes = desLevel[dx][dy];
+                }
+            }
+        }
+        if (InDes(cx, cy) != -1) {
+            if (flag)
+                disOfAllHoodles[label] = 250;//在里面
+            else
+                disOfAllHoodles[label] = 80;
+        } else
+            disOfAllHoodles[label] = 100 - minValue;
+        return minIndex;
+    }
+    //将终点的剩余坐标减去despos的坐标，选出最接近的一个
+    public int calcDistance(int label, int index)//计算有效步长
+    {
+        int dx = possiblePos[label][index][0], dy = possiblePos[label][index][1];
+        int cx = currPos[label][0], cy = currPos[label][1];
+        if (gameManager.currentPlayer == 1)
+            return dy - cy;
+        else if (gameManager.currentPlayer == 2)
+            return ((cx - dx) + (dy - cy));
+        else if (gameManager.currentPlayer == 3)
+            return -(dx - cx);
+        else if (gameManager.currentPlayer == 4)
+            return -(dy - cy);
+        else if (gameManager.currentPlayer == 5)
+            return ((dx - cx) + (cy - dy));
+        else
+            return 0;
+    }
+    public double calcBias(int label, int index)
+    {
+        int x = possiblePos[label][index][0], y = possiblePos[label][index][1];
+        if (gameManager.currentPlayer == 1)
+            return System.Math.Abs(2 * x - 8 - y) * 0.5;
+        else if (gameManager.currentPlayer == 2)
+            return System.Math.Abs(x - 16 + y) * 0.5;
+        else if (gameManager.currentPlayer == 3)
+            return System.Math.Abs(0.5 * x + 4 - y);
+        else if (gameManager.currentPlayer == 4)
+            return System.Math.Abs(2 * x - 8 - y) * 0.5;
+        else if (gameManager.currentPlayer == 5)
+            return System.Math.Abs(x - 16 + y) * 0.5;
+        else
+            return 0;
+    }
+    //区分上下俩函数
+    public int calcDisFromCurrentPos(int label)
+    {
+        int cx = currPos[label][0], cy = currPos[label][1];
+        if (gameManager.currentPlayer == 1)
+            return 16 - cy;
+        else if (gameManager.currentPlayer == 2)
+            return System.Math.Abs(8 + cx - cy);
+        else if (gameManager.currentPlayer == 3)
+            return cx;
+        else if (gameManager.currentPlayer == 4)
+            return cy;
+        else if (gameManager.currentPlayer == 5)
+            return System.Math.Abs(8 + cy - cx);
+        else
+            return 0;
+    }
+    public double calcBiasFromCurrentPos(int label)
+    {
+        int x = currPos[label][0], y = currPos[label][1];
+        if (gameManager.currentPlayer == 1)
+            return System.Math.Abs(2 * x - 8 - y) * 0.5;
+        else if (gameManager.currentPlayer == 2)
+            return System.Math.Abs(x - 16 + y) * 0.5;
+        else if (gameManager.currentPlayer == 3)
+            return System.Math.Abs(0.5 * x + 4 - y);
+        else if (gameManager.currentPlayer == 4)
+            return System.Math.Abs(2 * x - 8 - y) * 0.5;
+        else if (gameManager.currentPlayer == 5)
+            return System.Math.Abs(x - 16 + y) * 0.5;
+        else
+            return 0;
+    }
+    //判断是否可以跳出本营
+    public int CanJumpOut(int label, int index)
+    {
+        //   for(int i = 0; i < 10; i++)
+        int a = 0;
+        if (inHome(currPos[label][0], currPos[label][1]) != -1
+            && inHome(possiblePos[label][index][0], possiblePos[label][index][1]) == -1) {
+            a = 1;
+            //Debug.log("CanJumpOut:");
+            //Debug.log("gameManager.currentPlayer:" + gameManager.currentPlayer +"index:　" + index +  " ("+ currPos[label][0] + ","+ currPos[label][1] + ")  "+ "(" + possiblePos[label][index][0] + "," + possiblePos[label][index][1] + ")  " + a);
+            return 1;
+        } else
+            return 0;
+    }
+    //判断是否在本营
+    public int inHome(int x, int y)
+    {
+        for (int i = 0; i < 10; i++) {
+            if (gameManager.currentPlayer == 2) {
+                //Debug.log("(x,y) " + "("+ x + "," + y+")" + initialPos[gameManager.currentPlayer][i][0]+" " + initialPos[gameManager.currentPlayer][i][1]);
+
+            }
+
+            if (x == initialPos[gameManager.currentPlayer][i][0] &&
+                y == initialPos[gameManager.currentPlayer][i][1]) {
+
+                return i;
+            }
+        }
+        return -1;
+    }
+    //判断是否可以跳进终营
+    public int CanJumpIn(int label, int index)
+    {
+        int a = 0,
+            currDif = 0,
+            desDif = 0,
+            dif = 0;
+        int[,] final = { { 16, 12 }, { 12, 16 }, { 4, 12 }, { 0, 4 }, { 4, 0 }, { 12, 4 } };
+        if (InDes(currPos[label][0], currPos[label][1]) == -1
+            && InDes(possiblePos[label][index][0], possiblePos[label][index][1]) != -1) {
+            a = 1;
+            //Debug.log("CanJumpOut:");
+            //Debug.log("gameManager.currentPlayer:" + gameManager.currentPlayer +"index:　" + index +  " ("+ currPos[label][0] + ","+ currPos[label][1] + ")  "+ "(" + possiblePos[label][index][0] + "," + possiblePos[label][index][1] + ")  " + a);
+            return 1;
+        }
+        return 0;
+    }
+    //判断是否在终营
+    public int InDes(int x, int y)
+    {
+        {
+            for (int i = 0; i < 10; i++) {
+                if (x == finalPos[gameManager.currentPlayer][i][0] &&
+                    y == finalPos[gameManager.currentPlayer][i][1]) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+    }
+    //判断是不是可接受解
+    public int calcDif(int label, int index)
+    {
+        int minValue = 100, minIndex = 0, tmpValue = 0;
+        int currDif = 0, desDif = 0;
+        for (int i = 0; i < 10; i++) {
+            if (finalPosState[gameManager.currentPlayer][i] == 0) {
+                currDif = System.Math.Abs(currPos[label][0] - finalPos[gameManager.currentPlayer][i][0]) + System.Math.Abs(currPos[label][1] - finalPos[gameManager.currentPlayer][0][1]);
+                desDif = System.Math.Abs(possiblePos[label][index][0] - finalPos[gameManager.currentPlayer][i][0]) + System.Math.Abs(possiblePos[label][index][1] - finalPos[gameManager.currentPlayer][i][1]);
+                tmpValue = desDif - currDif;
+                if (tmpValue < minValue) {
+                    minValue = tmpValue;
+                    minIndex = i;
+                }
+
+            }
+        }
+
+        return minValue;//去检查目的地相对于现在的位置而言，是否离最终的营地更近
+    }
+    //判断是不是会跳到禁区内
+    public int WillJumpToBanned(int label, int index)
+    {
+        for (int i = 0; i < 12; i++) {
+            if (possiblePos[label][index][0] == forbiddenPos[gameManager.currentPlayer][i][0] &&
+               possiblePos[label][index][1] == forbiddenPos[gameManager.currentPlayer][i][1]) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+    //对于已经在终营里的棋子，判断是不是可以更进一步（划分成4个层次，除第四层次外，其余层次可以更进一步时，返回1）
+    public int CanGoFurther(int label, int index)
+    {
+        int cx = currPos[label][0],
+            cy = currPos[label][1],
+            dx = possiblePos[label][index][0],
+            dy = possiblePos[label][index][1];
+        if (desLevel[cx][cy] != 0 && desLevel[cx][cy] != 4) {
+            if (desLevel[cx][cy] > desLevel[dx][dy])
+                return 1;
+        }
+        return 0;
+    }
+
+
+    public void AttributeInit()
+    {
+        for (int i = 0; i < 10; i++) {
+            possiblePos[i] = new int[100][];
+            for (int j = 0; j < 100; j++) {
+                possiblePos[i][j] = new int[2];
+            }
+        }
+
+    }
+    public void finalPosInit()
+    {
+        int[] tmpLength = { 0, 0, 0, 0, 0, 0 };
+        //Debug.log("初始化了");
+        if (!calcFinalPos) {
+            int num = 0;
+            for (int i = 0; i < 17; i++) {
+                for (int j = 0; j < 17; j++) {
+                    if (boardCells[i, j] != null && boardCells[i, j].destinationPlayer != -1) {
+                        int tmpPlayer = boardCells[i, j].destinationPlayer;
+                        // //Debug.log("tmpPlayer: " + tmpPlayer + "   "+i +"," + j);
+                        finalPos[tmpPlayer][tmpLength[tmpPlayer]][0] = i;
+                        finalPos[tmpPlayer][tmpLength[tmpPlayer]][1] = j;
+                        initialPos[tmpPlayer][tmpLength[tmpPlayer]][0] = 16 - i;
+                        initialPos[tmpPlayer][tmpLength[tmpPlayer]][1] = 16 - j;
+                        // //Debug.log("tmpPlayer: " + tmpPlayer + "   " + (16 - i) + "," + (16 - j));
+                        tmpLength[tmpPlayer]++;
+                    }
+                }
+            }
+        }
+        /*
+        for (int i = 0; i < 6; i++)
+        {
+            //Debug.log("gameManager.currentPlayer is:" + i);
+            for (int j = 0; j < 10; j++)
+            {
+                //Debug.log("起点:" + initialPos[i][j][0] + "," + initialPos[i][j][1]);
+            }
+        }
+        */
+        calcFinalPos = true;
+    }
+    public void forbiddenPosInit()
+    {
+        for (int i = 0; i < 6; i++) {
+            forbiddenPos[i] = new int[12][];
+            for (int j = 0; j < 12; j++) {
+                forbiddenPos[i][j] = new int[2];
+            }
+        }
+        //player 1 4的禁区
+        forbiddenPos[1][0][0] = 0;
+        forbiddenPos[1][0][1] = 4;
+        forbiddenPos[1][1][0] = 1;
+        forbiddenPos[1][1][1] = 4;
+        forbiddenPos[1][2][0] = 1;
+        forbiddenPos[1][2][1] = 5;
+        forbiddenPos[1][3][0] = 12;
+        forbiddenPos[1][3][1] = 4;
+        forbiddenPos[1][4][0] = 11;
+        forbiddenPos[1][4][1] = 4;
+        forbiddenPos[1][5][0] = 12;
+        forbiddenPos[1][5][1] = 5;
+        forbiddenPos[1][6][0] = 16;
+        forbiddenPos[1][6][1] = 12;
+        forbiddenPos[1][7][0] = 15;
+        forbiddenPos[1][7][1] = 12;
+        forbiddenPos[1][8][0] = 16;
+        forbiddenPos[1][8][1] = 11;
+        forbiddenPos[1][9][0] = 4;
+        forbiddenPos[1][9][1] = 12;
+        forbiddenPos[1][10][0] = 4;
+        forbiddenPos[1][10][1] = 11;
+        forbiddenPos[1][11][0] = 5;
+        forbiddenPos[1][11][1] = 12;
+        //player 2 5 的禁区
+        forbiddenPos[2][0][0] = 0;
+        forbiddenPos[2][0][1] = 4;
+        forbiddenPos[2][1][0] = 1;
+        forbiddenPos[2][1][1] = 4;
+        forbiddenPos[2][2][0] = 1;
+        forbiddenPos[2][2][1] = 5;
+        forbiddenPos[2][3][0] = 4;
+        forbiddenPos[2][3][1] = 0;
+        forbiddenPos[2][4][0] = 4;
+        forbiddenPos[2][4][1] = 1;
+        forbiddenPos[2][5][0] = 5;
+        forbiddenPos[2][5][1] = 1;
+        forbiddenPos[2][6][0] = 16;
+        forbiddenPos[2][6][1] = 12;
+        forbiddenPos[2][7][0] = 15;
+        forbiddenPos[2][7][1] = 12;
+        forbiddenPos[2][8][0] = 16;
+        forbiddenPos[2][8][1] = 11;
+        forbiddenPos[2][9][0] = 12;
+        forbiddenPos[2][9][1] = 16;
+        forbiddenPos[2][10][0] = 12;
+        forbiddenPos[2][10][1] = 15;
+        forbiddenPos[2][11][0] = 11;
+        forbiddenPos[2][11][1] = 15;
+        //player 3的禁区
+        forbiddenPos[3][0][0] = 12;
+        forbiddenPos[3][0][1] = 4;
+        forbiddenPos[3][1][0] = 11;
+        forbiddenPos[3][1][1] = 4;
+        forbiddenPos[3][2][0] = 12;
+        forbiddenPos[3][2][1] = 5;
+        forbiddenPos[3][3][0] = 4;
+        forbiddenPos[3][3][1] = 12;
+        forbiddenPos[3][4][0] = 4;
+        forbiddenPos[3][4][1] = 11;
+        forbiddenPos[3][5][0] = 5;
+        forbiddenPos[3][5][1] = 12;
+        forbiddenPos[3][6][0] = 4;
+        forbiddenPos[3][6][1] = 0;
+        forbiddenPos[3][7][0] = 4;
+        forbiddenPos[3][7][1] = 1;
+        forbiddenPos[3][8][0] = 5;
+        forbiddenPos[3][8][1] = 1;
+        forbiddenPos[3][9][0] = 12;
+        forbiddenPos[3][9][1] = 16;
+        forbiddenPos[3][10][0] = 12;
+        forbiddenPos[3][10][1] = 15;
+        forbiddenPos[3][11][0] = 11;
+        forbiddenPos[3][11][1] = 15;
+        for (int i = 0; i < 2; i++) {
+            for (int j = 0; j < 12; j++) {
+                forbiddenPos[i + 3][j][0] = forbiddenPos[i][j][0];
+                forbiddenPos[i + 3][j][1] = forbiddenPos[i][j][1];
+            }
+        }
+    }
+    public void desLevelInit()
+    {
+        //player 4
+        for (int i = 0; i < 17; i++)
+            desLevel[i] = new int[17];
+        for (int i = 0; i < 17; i++) {
+            for (int j = 0; j < 17; j++) {
+                desLevel[i][j] = 5;
+            }
+        }
+        desLevel[7][3] = 4;
+        desLevel[6][3] = 4;
+        desLevel[6][2] = 3;
+        desLevel[5][3] = 4;
+        desLevel[5][2] = 3;
+        desLevel[5][1] = 2;
+        desLevel[4][3] = 4;
+        desLevel[4][2] = 3;
+        desLevel[4][1] = 2;
+        desLevel[4][0] = 1;
+        //player 5
+        desLevel[12][7] = 4;
+        desLevel[12][6] = 3;
+        desLevel[12][5] = 2;
+        desLevel[12][4] = 1;
+        desLevel[11][6] = 4;
+        desLevel[11][5] = 3;
+        desLevel[11][4] = 2;
+        desLevel[10][5] = 4;
+        desLevel[10][4] = 3;
+        desLevel[9][4] = 4;
+        //player 3
+        desLevel[3][7] = 4;
+        desLevel[3][6] = 4;
+        desLevel[3][5] = 4;
+        desLevel[3][4] = 4;
+        desLevel[2][6] = 3;
+        desLevel[2][5] = 3;
+        desLevel[2][4] = 3;
+        desLevel[1][5] = 2;
+        desLevel[1][4] = 2;
+        desLevel[0][4] = 1;
+        //player 2
+        desLevel[7][12] = 4;
+        desLevel[6][12] = 3;
+        desLevel[6][11] = 4;
+        desLevel[5][12] = 2;
+        desLevel[5][11] = 3;
+        desLevel[5][10] = 4;
+        desLevel[4][12] = 1;
+        desLevel[4][11] = 2;
+        desLevel[4][10] = 3;
+        desLevel[4][9] = 4;
+        //player 1
+        desLevel[12][16] = 1;
+        desLevel[12][15] = 2;
+        desLevel[12][14] = 3;
+        desLevel[12][13] = 4;
+        desLevel[11][15] = 2;
+        desLevel[11][14] = 3;
+        desLevel[11][13] = 4;
+        desLevel[10][14] = 3;
+        desLevel[10][13] = 4;
+        desLevel[9][13] = 4;
+    }
+
+
+
 }

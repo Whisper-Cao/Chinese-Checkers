@@ -32,7 +32,7 @@ public class AIManager : PlayerAbstract
                 for (int i = 0; i < 10; i++)
                     board.possibleNum[i] = 0;
                 if (gameManager.currentPlayer != 0 && gameManager.currentPlayer != 6) {
-                    board.ActionForAI();
+                    ActionForAI();
                     //先确定选哪个子，并且给出该子的坐标，用算法选出目的地
                     int chosen = board.ChooseAlgorithm(),
                              currX = board.currPos[chosen][0],
@@ -61,6 +61,19 @@ public class AIManager : PlayerAbstract
         //StartCoroutine(board.LetMoveAI(new Vector3(1, 2, 3), desX, desY, chosen));
         //gameManager.SyncAction("AIMove " + currX + " " + currY + " " + desX + " " + desY + " " + chosen);
     }*/
+
+    public void ActionForAI()
+    {
+        //遍历该方的每一个子，找到其可能的位置并保存（保存终点位置，该子的初始位置，路径）
+        for (int i = 0; i < 10; i++) {
+            board.currPos[i] = new int[2];
+            board.currPos[i][0] = hoodleMoves[i].onBoardCoord[0];
+            board.currPos[i][1] = hoodleMoves[i].onBoardCoord[1];
+            board.SearchMovableAI(hoodleMoves[i].onBoardCoord, i);
+        }
+        //通过算法选择走法,选择一个currentHoodle,移动并更新坐标
+        board.chosenHoodle = 0;
+    }
 
 
     override public void Link()

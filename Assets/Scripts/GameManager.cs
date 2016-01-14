@@ -1056,7 +1056,7 @@ public class GameManager : MonoBehaviour
             string[] actionParams = aiAction.Split(' ');
             for (int i = 0; i < 10; i++)
                 board.possibleNum[i] = 0;
-            board.ActionForAI();
+            ((AIManager)players[currentPlayer]).ActionForAI();
             board.currentHoodle = board.boardCells[int.Parse(actionParams[1]), int.Parse(actionParams[2])].hoodle;
             yield return StartCoroutine(board.LetMoveAI(new Vector3(1, 2, 3), int.Parse(actionParams[3]), int.Parse(actionParams[4]), int.Parse(actionParams[5])));
         }

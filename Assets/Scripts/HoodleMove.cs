@@ -11,7 +11,7 @@ public class HoodleMove : MonoBehaviour
     private Vector3 destPos;//the next position to jump to
     private Board playBoard;
     private Component halo;//highlight of the hoodle
-    private int[] onBoardCoord = new int[2];//the row and col number of hoodle on board
+    public int[] onBoardCoord = new int[2];//the row and col number of hoodle on board
     private GameManager gameManager;
     private bool locker = false;
     public Queue moveQueue;
