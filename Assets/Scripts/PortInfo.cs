@@ -56,10 +56,22 @@ public class PortInfo : Photon.MonoBehaviour {
                 } else if (opCode.StartsWith("start")) {
                     gameManager.GameStart();
                 } else if (opCode.StartsWith("AIMove")) {
-                    StartCoroutine(gameManager.GameManagerReactOnAINetwork(opCode));
-                }
+					print("Receive AI Move");
+                    StartCoroutine(ReactOnAINetwork(opCode));
+				} else if (opCode.StartsWith ("nextplayer")) {
+					print("" + gameManager.currentPlayer + " Here change");
+					gameManager.players[gameManager.currentPlayer].finished = true;
+				}
 
 			}
 		}
+	}
+
+	public IEnumerator ReactOnAINetwork(string opCode)
+	{
+		while (gameManager.onAIAction) {
+			yield return null;
+		}
+		yield return StartCoroutine(gameManager.GameManagerReactOnAINetwork(opCode));
 	}
 }

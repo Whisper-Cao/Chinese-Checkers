@@ -51,7 +51,7 @@ public class FloorLightController : MonoBehaviour
     //turn on the light in this cell
     public void TurnOnHighLight()
     {
-        if (gameManager.hintMode) {
+        if (gameManager.hintMode && !gameManager.players[gameManager.currentPlayer].IsAI()) {
             halo = GetComponent("Halo");
             halo.GetType().GetProperty("enabled").SetValue(halo, true, null);
             particle = GetComponentInChildren<ParticleRenderer>();

@@ -140,11 +140,15 @@ public class Board : MonoBehaviour
                     ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY) { // Check undos
                     ((PlayerManager) gameManager.players[gameManager.currentPlayer]).isTheFirstTry = true;
                     ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX = -1;
-                    ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX = -1;
+                    ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY = -1;
                     return false;
                 }
                 if (currentHoodle == newCurr) {	// Check confirms
-                    gameManager.timer = 0.0f;
+					if (gameManager.IsHost() && gameManager.players[gameManager.currentPlayer].IsAI() 
+					    || gameManager.IsMyTurn()) {
+						print("" + gameManager.currentPlayer + " Here change");
+						gameManager.players[gameManager.currentPlayer].finished = true;
+					}
                     return false;
                 }
             } else if (isTheFirstTry) {
@@ -235,12 +239,18 @@ public class Board : MonoBehaviour
             if (win) {
                 gameManager.Win(gameManager.players[gameManager.currentPlayer].color);
             } else {
-                currentHoodle.TurnOffHighlight();
+                if (currentHoodle != null) {
+					currentHoodle.TurnOffHighlight();
+				}
 
                 if (gameManager.maniaMode) {
                     currentHoodle = null;
-                    gameManager.nextPlayer();
-                } else {	// If in normal mode, only search for jump choices
+					if (gameManager.IsHost() && gameManager.players[gameManager.currentPlayer].IsAI() 
+					    || gameManager.IsMyTurn()) {
+						print("" + gameManager.currentPlayer + " Here change");
+						gameManager.players[gameManager.currentPlayer].finished = true;
+					}
+                } else if (currentHoodle != null) {	// If in normal mode, only search for jump choices
                     SearchMovable(currentHoodle.GetOnBoardPos(), false, boardCells[row, col].isJumpDestination);
                 }
             }
@@ -491,7 +501,7 @@ public class Board : MonoBehaviour
             for (int i = 0; i < 10; i++) {
                 SearchMovableAI(currPos[i], i);
             }
-            //Debug.Log(boardCells[4, 4].bounceQueueOfAI[2].Count);
+            ////Debug.Log(boardCells[4, 4].bounceQueueOfAI[2].Count);
             //通过算法选择走法,选择一个currentHoodle,移动并更新坐标
             chosenHoodle = 0;
         }
@@ -665,7 +675,7 @@ public class Board : MonoBehaviour
             SearchWalkDirectionAI(hoodleCoord, walkDirections[i], label);
         }
 
-        //if(label != -1 )Debug.Log("label: " + label + "count:" + boardCells[4, 4].bounceQueueOfAI[label].Count);
+        //if(label != -1 )//Debug.Log("label: " + label + "count:" + boardCells[4, 4].bounceQueueOfAI[label].Count);
         while (arrivableList.Count > 0) {
             int[] possibleCell = (int[]) arrivableList.Dequeue();
             if (label != -1) {
@@ -749,7 +759,7 @@ public class Board : MonoBehaviour
             finalPosState[gameManager.currentPlayer][desIndexInFinalPosState] = 1;
         if (currIndexInFinalPosState != -1)
             finalPosState[gameManager.currentPlayer][currIndexInFinalPosState] = 0;
-        Debug.Log("des: (" + desXOfAI + "," + desYOfAI + ")    " + "curr: (" + currPos[myChoice][0] + "," + currPos[myChoice][1] + ")");
+        //Debug.Log("des: (" + desXOfAI + "," + desYOfAI + ")    " + "curr: (" + currPos[myChoice][0] + "," + currPos[myChoice][1] + ")");
         return myChoice;
     }//选择算法分两步，先找到每个棋子对应的最优解，再找到最优棋子,调用chooseIndex()和chooseHoodle()
 
@@ -770,12 +780,12 @@ public class Board : MonoBehaviour
             //原来在终营且可以深入
             if (InDes(currPos[tmpLabel][0], currPos[tmpLabel][1]) != -1 && CanGoFurther(tmpLabel, tmpIndex) == 1) {
                 weight[i] += 30;
-                Debug.Log("可以深入");
+                //Debug.Log("可以深入");
             }
                 //原来在终营但不能深入
             else if (InDes(currPos[tmpLabel][0], currPos[tmpLabel][1]) != -1 && CanGoFurther(tmpLabel, tmpIndex) == 0) {
                 weight[i] -= 500;
-                Debug.Log("不能深入");
+                //Debug.Log("不能深入");
             }
 
             weight[i] += 10 * attribute[i][1];
@@ -788,7 +798,7 @@ public class Board : MonoBehaviour
             else if (dif == 0)
                 weight[i] -= 20;
 
-            Debug.Log("Label:" + tmpLabel + "curr: (" + currPos[tmpLabel][0] + "," + currPos[tmpLabel][1] + ") des: " + "(" + possiblePos[tmpLabel][tmpIndex][0] + "," + possiblePos[tmpLabel][tmpIndex][1] + ") " + " weight:" + weight[i]);
+            //Debug.Log("Label:" + tmpLabel + "curr: (" + currPos[tmpLabel][0] + "," + currPos[tmpLabel][1] + ") des: " + "(" + possiblePos[tmpLabel][tmpIndex][0] + "," + possiblePos[tmpLabel][tmpIndex][1] + ") " + " weight:" + weight[i]);
 
         }
         for (int i = 0; i < length; i++) {
@@ -797,8 +807,8 @@ public class Board : MonoBehaviour
                 indexOfMyChoice = i;
             }
         }
-        //Debug.Log("gameManager.currentPlayer is: " + gameManager.currentPlayer);
-        //Debug.Log("myChoice is: " + indexOfMyChoice);
+        ////Debug.Log("gameManager.currentPlayer is: " + gameManager.currentPlayer);
+        ////Debug.Log("myChoice is: " + indexOfMyChoice);
         return indexOfMyChoice;
     }
 
@@ -868,8 +878,8 @@ public class Board : MonoBehaviour
         if (inHome(currPos[label][0], currPos[label][1]) != -1
             && inHome(possiblePos[label][index][0], possiblePos[label][index][1]) == -1) {
             a = 1;
-            Debug.Log("CanJumpOut:");
-            //Debug.Log("gameManager.currentPlayer:" + gameManager.currentPlayer +"index:　" + index +  " ("+ currPos[label][0] + ","+ currPos[label][1] + ")  "+ "(" + possiblePos[label][index][0] + "," + possiblePos[label][index][1] + ")  " + a);
+            //Debug.Log("CanJumpOut:");
+            ////Debug.Log("gameManager.currentPlayer:" + gameManager.currentPlayer +"index:　" + index +  " ("+ currPos[label][0] + ","+ currPos[label][1] + ")  "+ "(" + possiblePos[label][index][0] + "," + possiblePos[label][index][1] + ")  " + a);
             return 1;
         } else
             return 0;
@@ -879,7 +889,7 @@ public class Board : MonoBehaviour
     {
         for (int i = 0; i < 10; i++) {
             if (gameManager.currentPlayer == 2) {
-                //Debug.Log("(x,y) " + "("+ x + "," + y+")" + initialPos[gameManager.currentPlayer][i][0]+" " + initialPos[gameManager.currentPlayer][i][1]);
+                ////Debug.Log("(x,y) " + "("+ x + "," + y+")" + initialPos[gameManager.currentPlayer][i][0]+" " + initialPos[gameManager.currentPlayer][i][1]);
 
             }
 
@@ -902,8 +912,8 @@ public class Board : MonoBehaviour
         if (InDes(currPos[label][0], currPos[label][1]) == -1
             && InDes(possiblePos[label][index][0], possiblePos[label][index][1]) != -1) {
             a = 1;
-            //Debug.Log("CanJumpOut:");
-            //Debug.Log("gameManager.currentPlayer:" + gameManager.currentPlayer +"index:　" + index +  " ("+ currPos[label][0] + ","+ currPos[label][1] + ")  "+ "(" + possiblePos[label][index][0] + "," + possiblePos[label][index][1] + ")  " + a);
+            ////Debug.Log("CanJumpOut:");
+            ////Debug.Log("gameManager.currentPlayer:" + gameManager.currentPlayer +"index:　" + index +  " ("+ currPos[label][0] + ","+ currPos[label][1] + ")  "+ "(" + possiblePos[label][index][0] + "," + possiblePos[label][index][1] + ")  " + a);
             return 1;
         }
         return 0;
@@ -978,19 +988,19 @@ public class Board : MonoBehaviour
     public void finalPosInit()
     {
         int[] tmpLength = { 0, 0, 0, 0, 0, 0 };
-        //Debug.Log("初始化了");
+        ////Debug.Log("初始化了");
         if (!calcFinalPos) {
             int num = 0;
             for (int i = 0; i < 17; i++) {
                 for (int j = 0; j < 17; j++) {
                     if (boardCells[i, j] != null && boardCells[i, j].destinationPlayer != -1) {
                         int tmpPlayer = boardCells[i, j].destinationPlayer;
-                        // Debug.Log("tmpPlayer: " + tmpPlayer + "   "+i +"," + j);
+                        // //Debug.Log("tmpPlayer: " + tmpPlayer + "   "+i +"," + j);
                         finalPos[tmpPlayer][tmpLength[tmpPlayer]][0] = i;
                         finalPos[tmpPlayer][tmpLength[tmpPlayer]][1] = j;
                         initialPos[tmpPlayer][tmpLength[tmpPlayer]][0] = 16 - i;
                         initialPos[tmpPlayer][tmpLength[tmpPlayer]][1] = 16 - j;
-                        // Debug.Log("tmpPlayer: " + tmpPlayer + "   " + (16 - i) + "," + (16 - j));
+                        // //Debug.Log("tmpPlayer: " + tmpPlayer + "   " + (16 - i) + "," + (16 - j));
                         tmpLength[tmpPlayer]++;
                     }
                 }
@@ -998,9 +1008,9 @@ public class Board : MonoBehaviour
         }
 
         for (int i = 0; i < 6; i++) {
-            Debug.Log("gameManager.currentPlayer is:" + i);
+            //Debug.Log("gameManager.currentPlayer is:" + i);
             for (int j = 0; j < 10; j++) {
-                Debug.Log("起点:" + initialPos[i][j][0] + "," + initialPos[i][j][1]);
+                //Debug.Log("起点:" + initialPos[i][j][0] + "," + initialPos[i][j][1]);
             }
         }
 
@@ -1246,8 +1256,11 @@ public class Board : MonoBehaviour
                 //currentHoodle.ResumeState();
                 //currentHoodle.TurnOffHighlight();
                 currentHoodle = null;
-                //Debug.log("can go into next");
-                gameManager.nextPlayer();
+                ////Debug.log("can go into next");
+				if (gameManager.IsHost()) {
+					print("" + gameManager.currentPlayer + " Here change");
+					gameManager.players[gameManager.currentPlayer].finished = true;
+				}
             }
             //check for time mode
             //UpdateGameMode(row, col);
@@ -1288,10 +1301,10 @@ public class Board : MonoBehaviour
                 boardCells[root[0] + dir[0], root[1] + dir[1]].bounceQueueOfAI[label] = (Queue) boardCells[root[0], root[1]].bounceQueueOfAI[label].Clone();
                 boardCells[root[0] + dir[0], root[1] + dir[1]].bounceQueueOfAI[label].Enqueue(new int[2] { root[0] + dir[0], root[1] + dir[1] });
                 /*
-                //Debug.log("begin");
-                //Debug.log(root[0]+" " + root[1]);
-                //Debug.log((root[0] + dir[0]) + " " + (root[1]+dir[1]));
-                //Debug.log("label:" + label + " " + boardCells[root[0] + dir[0], root[1] + dir[1]].bounceQueueOfAI[label].Count);
+                ////Debug.log("begin");
+                ////Debug.log(root[0]+" " + root[1]);
+                ////Debug.log((root[0] + dir[0]) + " " + (root[1]+dir[1]));
+                ////Debug.log("label:" + label + " " + boardCells[root[0] + dir[0], root[1] + dir[1]].bounceQueueOfAI[label].Count);
                 */
             }
             int[] tmp = new int[2] { root[0] + dir[0], root[1] + dir[1] };
@@ -1353,7 +1366,7 @@ public class Board : MonoBehaviour
         while (searchQueue.Count != 0) {
             root = (int[]) searchQueue.Dequeue();
             if (!gameManager.flyMode) {
-                print("Normal Search");
+                //print("Normal Search");
                 for (int i = 0; i < 6; ++i)
                     SearchJumpDirectionAI(root, jumpDirections[0][i], ref possState, ref searchQueue, label);
             } else
@@ -1370,7 +1383,7 @@ public class Board : MonoBehaviour
 
 
 
-        //if(label != -1 )//Debug.log("label: " + label + "count:" + boardCells[4, 4].bounceQueueOfAI[label].Count);
+        //if(label != -1 )////Debug.log("label: " + label + "count:" + boardCells[4, 4].bounceQueueOfAI[label].Count);
         while (arrivableList.Count > 0) {
             int[] possibleCell = (int[]) arrivableList.Dequeue();
             if (label != -1) {
@@ -1411,13 +1424,13 @@ public class Board : MonoBehaviour
         for (int i = 0; i < 10; i++) {
             if (possibleNum[i] != 0) {
                 if (leftPlaces > 2) {
-                    Debug.Log("大于2" + System.DateTime.Now.Millisecond.ToString());
+                    //Debug.Log("大于2" + System.DateTime.Now.Millisecond.ToString());
                     optionalQueue[optionalLength][0] = i;
                     indexOfMax = chooseIndex(i, disOfAllHoodles);
                     optionalQueue[optionalLength][1] = indexOfMax;
                     optionalLength++;
                 } else {
-                    Debug.Log("小于2" + System.DateTime.Now.Millisecond.ToString());
+                    //Debug.Log("小于2" + System.DateTime.Now.Millisecond.ToString());
                     optionalQueue[optionalLength][0] = i;
                     indexOfMax = chooseIndexLessThanTwo(i, leftPlaces, leftArray, disOfAllHoodles);
                     optionalQueue[optionalLength][1] = indexOfMax;
@@ -1463,7 +1476,7 @@ public class Board : MonoBehaviour
             finalPosState[gameManager.currentPlayer][desIndexInFinalPosState] = 1;
         if (currIndexInFinalPosState != -1)
             finalPosState[gameManager.currentPlayer][currIndexInFinalPosState] = 0;
-        Debug.Log("des: (" + desXOfAI + "," + desYOfAI + ")    " + "curr: (" + currPos[myChoice][0] + "," + currPos[myChoice][1] + ")" + System.DateTime.Now.Millisecond.ToString());
+        //Debug.Log("des: (" + desXOfAI + "," + desYOfAI + ")    " + "curr: (" + currPos[myChoice][0] + "," + currPos[myChoice][1] + ")" + System.DateTime.Now.Millisecond.ToString());
         return myChoice;
     }//选择算法分两步，先找到每个棋子对应的最优解，再找到最优棋子,调用chooseIndex()和chooseHoodle()
 
@@ -1473,8 +1486,8 @@ public class Board : MonoBehaviour
         double[] weight = new double[10];
         int tmpLabel = 0, tmpIndex = 0, dif = 0;
         double max = -10000;
-        //for (int i = 0; i < 10; i++) //Debug.log("label = " + i + "distance:" + disOfAllHoodles[i]);
-        Debug.Log("有" + length + "个棋子可以走");
+        //for (int i = 0; i < 10; i++) ////Debug.log("label = " + i + "distance:" + disOfAllHoodles[i]);
+        //Debug.Log("有" + length + "个棋子可以走");
         for (int i = 0; i < length; i++)//这里的i不是棋子的标号，optionalQueue[i][0]才是
         {
             tmpLabel = optionalQueue[i][0];
@@ -1488,12 +1501,12 @@ public class Board : MonoBehaviour
             //原来在终营且可以深入
             if (InDes(currPos[tmpLabel][0], currPos[tmpLabel][1]) != -1 && CanGoFurther(tmpLabel, tmpIndex) == 1) {
                 weight[i] += 30;
-                //Debug.log("可以深入");
+                ////Debug.log("可以深入");
             }
                 //原来在终营但不能深入
             else if (InDes(currPos[tmpLabel][0], currPos[tmpLabel][1]) != -1 && CanGoFurther(tmpLabel, tmpIndex) == 0) {
                 weight[i] -= 500;
-                //Debug.log("不能深入");
+                ////Debug.log("不能深入");
             }
             //一个是i一个是label
             weight[i] += 40 * currPosAttribute[i];
@@ -1507,9 +1520,11 @@ public class Board : MonoBehaviour
             }
             //else if (dif == 0) weight[i] -= 20;
 
-            Debug.Log("Label:" + tmpLabel + "curr: (" + currPos[tmpLabel][0] + "," + currPos[tmpLabel][1] + ") des: " + "(" + possiblePos[tmpLabel][tmpIndex][0] + "," + possiblePos[tmpLabel][tmpIndex][1] + ") " + " weight:" + weight[i] + "有效步长:" + disOfAllHoodles[tmpLabel] + "  起始位置到目的地的距离" + currPosAttribute[i] + System.DateTime.Now.Millisecond.ToString());
+            /*//Debug.Log("Label:" + tmpLabel + "curr: (" + currPos[tmpLabel][0] + "," + currPos[tmpLabel][1] + 
+			          ") des: " + "(" + possiblePos[tmpLabel][tmpIndex][0] + "," + possiblePos[tmpLabel][tmpIndex][1] 
+			          + ") " + " weight:" + weight[i] + "有效步长:" + disOfAllHoodles[tmpLabel] + "  起始位置到目的地的距离" + currPosAttribute[i] + System.DateTime.Now.Millisecond.ToString());
 
-        }
+        */}
         for (int i = 0; i < length; i++) {
             if (weight[i] > max) {
                 max = weight[i];
@@ -1593,7 +1608,7 @@ public class Board : MonoBehaviour
                 }
             }*/
         }
-        //Debug.log("Label: " + label + "dis:" + tmpDis + "bias:" + tmpbias + " maxValue:" + maxValue);
+        ////Debug.log("Label: " + label + "dis:" + tmpDis + "bias:" + tmpbias + " maxValue:" + maxValue);
         disOfAllHoodles[label] = maxValue;
         return maxIndex;
     }
@@ -1615,7 +1630,7 @@ public class Board : MonoBehaviour
                 for (int j = 0; j < leftPlaces; j++) {
                     dx0 = finalPos[gameManager.currentPlayer][leftArray[j]][0];
                     dy0 = finalPos[gameManager.currentPlayer][leftArray[j]][1];
-                    Debug.Log("Label:" + label + " dx0: " + dx0 + " dy0: " + dy0);
+                    //Debug.Log("Label:" + label + " dx0: " + dx0 + " dy0: " + dy0);
                     dis = System.Math.Abs(dx0 - dx) + System.Math.Abs(dy0 - dy);
                     if (dis < minValue) {
                         minValue = dis;
@@ -1717,8 +1732,8 @@ public class Board : MonoBehaviour
         if (inHome(currPos[label][0], currPos[label][1]) != -1
             && inHome(possiblePos[label][index][0], possiblePos[label][index][1]) == -1) {
             a = 1;
-            //Debug.log("CanJumpOut:");
-            //Debug.log("gameManager.currentPlayer:" + gameManager.currentPlayer +"index:　" + index +  " ("+ currPos[label][0] + ","+ currPos[label][1] + ")  "+ "(" + possiblePos[label][index][0] + "," + possiblePos[label][index][1] + ")  " + a);
+            ////Debug.log("CanJumpOut:");
+            ////Debug.log("gameManager.currentPlayer:" + gameManager.currentPlayer +"index:　" + index +  " ("+ currPos[label][0] + ","+ currPos[label][1] + ")  "+ "(" + possiblePos[label][index][0] + "," + possiblePos[label][index][1] + ")  " + a);
             return 1;
         } else
             return 0;
@@ -1728,7 +1743,7 @@ public class Board : MonoBehaviour
     {
         for (int i = 0; i < 10; i++) {
             if (gameManager.currentPlayer == 2) {
-                //Debug.log("(x,y) " + "("+ x + "," + y+")" + initialPos[gameManager.currentPlayer][i][0]+" " + initialPos[gameManager.currentPlayer][i][1]);
+                ////Debug.log("(x,y) " + "("+ x + "," + y+")" + initialPos[gameManager.currentPlayer][i][0]+" " + initialPos[gameManager.currentPlayer][i][1]);
 
             }
 
@@ -1751,8 +1766,8 @@ public class Board : MonoBehaviour
         if (InDes(currPos[label][0], currPos[label][1]) == -1
             && InDes(possiblePos[label][index][0], possiblePos[label][index][1]) != -1) {
             a = 1;
-            //Debug.log("CanJumpOut:");
-            //Debug.log("gameManager.currentPlayer:" + gameManager.currentPlayer +"index:　" + index +  " ("+ currPos[label][0] + ","+ currPos[label][1] + ")  "+ "(" + possiblePos[label][index][0] + "," + possiblePos[label][index][1] + ")  " + a);
+            ////Debug.log("CanJumpOut:");
+            ////Debug.log("gameManager.currentPlayer:" + gameManager.currentPlayer +"index:　" + index +  " ("+ currPos[label][0] + ","+ currPos[label][1] + ")  "+ "(" + possiblePos[label][index][0] + "," + possiblePos[label][index][1] + ")  " + a);
             return 1;
         }
         return 0;
@@ -1829,19 +1844,19 @@ public class Board : MonoBehaviour
     public void finalPosInit()
     {
         int[] tmpLength = { 0, 0, 0, 0, 0, 0 };
-        //Debug.log("初始化了");
+        ////Debug.log("初始化了");
         if (!calcFinalPos) {
             int num = 0;
             for (int i = 0; i < 17; i++) {
                 for (int j = 0; j < 17; j++) {
                     if (boardCells[i, j] != null && boardCells[i, j].destinationPlayer != -1) {
                         int tmpPlayer = boardCells[i, j].destinationPlayer;
-                        // //Debug.log("tmpPlayer: " + tmpPlayer + "   "+i +"," + j);
+                        // ////Debug.log("tmpPlayer: " + tmpPlayer + "   "+i +"," + j);
                         finalPos[tmpPlayer][tmpLength[tmpPlayer]][0] = i;
                         finalPos[tmpPlayer][tmpLength[tmpPlayer]][1] = j;
                         initialPos[tmpPlayer][tmpLength[tmpPlayer]][0] = 16 - i;
                         initialPos[tmpPlayer][tmpLength[tmpPlayer]][1] = 16 - j;
-                        // //Debug.log("tmpPlayer: " + tmpPlayer + "   " + (16 - i) + "," + (16 - j));
+                        // ////Debug.log("tmpPlayer: " + tmpPlayer + "   " + (16 - i) + "," + (16 - j));
                         tmpLength[tmpPlayer]++;
                     }
                 }
@@ -1850,10 +1865,10 @@ public class Board : MonoBehaviour
         /*
         for (int i = 0; i < 6; i++)
         {
-            //Debug.log("gameManager.currentPlayer is:" + i);
+            ////Debug.log("gameManager.currentPlayer is:" + i);
             for (int j = 0; j < 10; j++)
             {
-                //Debug.log("起点:" + initialPos[i][j][0] + "," + initialPos[i][j][1]);
+                ////Debug.log("起点:" + initialPos[i][j][0] + "," + initialPos[i][j][1]);
             }
         }
         */

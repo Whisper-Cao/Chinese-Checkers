@@ -12,6 +12,8 @@ public abstract class PlayerAbstract : MonoBehaviour
     public GameObject[] cameras;
     protected GameManager gameManager;
 
+	public bool isJumping, finished;
+
     abstract public void Link();
 
     abstract public bool IsAI();

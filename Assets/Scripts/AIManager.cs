@@ -19,6 +19,8 @@ public class AIManager : PlayerAbstract
 
     override public void SetCurrent(bool flag)
     {
+		isJumping = false;
+		finished = false;
         if (flag) {
             if (gameManager.IsHost()) {
                 gameManager.currentCamera.enabled = true;
@@ -45,11 +47,11 @@ public class AIManager : PlayerAbstract
                     board.currentHoodle = board.boardCells[currX, currY].hoodle;
                     //ebug.Log("owner: " + board.currentHoodle.owner);
                     //if (board.currentHoodle == null) Debug.Log("error!");
-                    for (int i = 0; i < 10000000; ++i)
                         ;
+					gameManager.SyncAction("AIMove " + currX + " " + currY + " " + desX + " " + desY + " " + chosen);
                     StartCoroutine(board.LetMoveAI(new Vector3(1, 2, 3), desX, desY, chosen));
                     //StartCoroutine(AISleepAction(currX, currY, desX, desY, chosen));
-                    gameManager.SyncAction("AIMove " + currX + " " + currY + " " + desX + " " + desY + " " + chosen);
+                    
                 }
             }
         }

@@ -84,8 +84,8 @@ public class HoodleMove : MonoBehaviour
     //move after a destination is chosen
     public IEnumerator NotifyMove()
     {
+		gameManager.players[gameManager.currentPlayer].isJumping = true;
         while (moveQueue.Count > 0) {
-            gameManager.finished = false;
             destPos = (Vector3) moveQueue.Dequeue();
             TurnOffHighlight();
             rigidBody.AddForce(CalcForce(destPos));
@@ -99,10 +99,12 @@ public class HoodleMove : MonoBehaviour
                 AS.Play();
             }
         }
-        gameManager.finished = true;
+
+		gameManager.players[gameManager.currentPlayer].isJumping = false;
+
         if (gameManager.maniaMode) {
             if (locker) {
-                //gameManager.nextPlayer();
+
                 locker = false;
             }
         }

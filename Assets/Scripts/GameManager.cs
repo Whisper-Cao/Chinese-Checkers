@@ -60,8 +60,8 @@ public class GameManager : MonoBehaviour
     [HideInInspector]
     public int timeInterval;
     public int[] playerTimeInterval;//every player have different timeIntervals
-    [HideInInspector]
-    public bool finished = true;
+	private bool isWaiting;
+	public bool onAIAction;
 
     //game modes
     public bool timeMode;
@@ -170,6 +170,8 @@ public class GameManager : MonoBehaviour
         gamePanel.SetActive(false);
 
         roomList = new Queue();
+		isWaiting = false;
+		onAIAction = false;
 
         aIactionQueue = new Queue();
     }
@@ -182,7 +184,7 @@ public class GameManager : MonoBehaviour
                 timeText.text = (Mathf.CeilToInt(timer)).ToString();
                 if (timer <= 0) {//if time out, next player
                     locker = true;
-                    StartCoroutine(WaitForFinish());
+                    //StartCoroutine(WaitForFinish());
                 }
             } else
                 timeText.text = "Jumping";
@@ -196,17 +198,64 @@ public class GameManager : MonoBehaviour
                 winText.enabled = false;
             }
         }
+
+		try {
+			if (IsHost() && players[currentPlayer].IsAI() || IsMyTurn()) {
+				if (timer <= 0 && !isWaiting) {
+
+					StartCoroutine(WaitForJump());
+					print("" + currentPlayer + " Time Out Next Player " + System.DateTime.Now.Millisecond.ToString());
+
+				} else if (players[currentPlayer].finished) {
+					players[currentPlayer].finished = false;
+					print("" + currentPlayer + " Finished nextPlayer " + System.DateTime.Now.Millisecond.ToString());
+					if (IsMyTurn()) {
+						SyncAction ("nextplayer");
+					}
+					nextPlayer();
+
+				}
+			} else {
+				if (players[currentPlayer].finished) {
+					players[currentPlayer].finished = false;
+					StartCoroutine(WaitForAI());
+				}
+			}
+		} catch {
+
+		}
+
+		if (roomPanel3.activeSelf) {
+			for (int i = 0; i < 6; ++i) {
+				playerImages[i].SetActive(i < roomPlayerNum);
+			}
+		}
     }
 
 
 
-    IEnumerator WaitForFinish()
+    IEnumerator WaitForJump()
     {
-        while (!finished) {
+		isWaiting = true;
+        while (players[currentPlayer].isJumping) {
+			//print("Is Jumping" + System.DateTime.Now.Millisecond.ToString());
             yield return null;
         }
-        nextPlayer();
+
+		nextPlayer();
+		SyncAction ("nextplayer");
+		isWaiting = false;
     }
+
+	public IEnumerator WaitForAI()
+	{
+		while (onAIAction) {
+			yield return null;
+		}
+
+		print("" + currentPlayer + " Client nextPlayer " + System.DateTime.Now.Millisecond.ToString());
+		nextPlayer();
+	}
 
     //after a hoodle reach its destination, it will call this method to allow the next player to continue
     public void nextPlayer()
@@ -234,7 +283,7 @@ public class GameManager : MonoBehaviour
             timeText.text = (Mathf.CeilToInt(timer)).ToString();
             board.ClearCurrentHoodle();
             locker = false;
-            finished = true;
+			onAIAction = false;
 
             if (timeMode) {
                 board.TimeModeGenerate();
@@ -770,8 +819,8 @@ public class GameManager : MonoBehaviour
                 = TranslateRoomInfo((string) roomArray[currentRoom]);
         }
         if (roomArray.Length > 1 + currentRoom) {
-            roomButtons[0].GetComponentInChildren<Text>().text 
-                = TranslateRoomInfo((string )roomArray[currentRoom]);
+            roomButtons[1].GetComponentInChildren<Text>().text 
+                = TranslateRoomInfo((string )roomArray[currentRoom + 1]);
         }
     }
 
@@ -785,8 +834,8 @@ public class GameManager : MonoBehaviour
                     = TranslateRoomInfo((string) roomArray[currentRoom]);
             }
             if (roomArray.Length > 1 + currentRoom) {
-                roomButtons[0].GetComponentInChildren<Text>().text
-                    = TranslateRoomInfo((string) roomArray[currentRoom]);
+                roomButtons[1].GetComponentInChildren<Text>().text
+                    = TranslateRoomInfo((string) roomArray[currentRoom + 1]);
             }
         }
     }
@@ -801,8 +850,8 @@ public class GameManager : MonoBehaviour
                     = TranslateRoomInfo((string) roomArray[currentRoom]);
             }
             if (roomArray.Length > 1 + currentRoom) {
-                roomButtons[0].GetComponentInChildren<Text>().text
-                    = TranslateRoomInfo((string) roomArray[currentRoom]);
+                roomButtons[1].GetComponentInChildren<Text>().text
+                    = TranslateRoomInfo((string) roomArray[currentRoom] + 1);
             }
         }
     }
@@ -860,6 +909,9 @@ public class GameManager : MonoBehaviour
         if (roomArray.Length > currentRoom) {
             SetRoomInformation((string) roomArray[currentRoom]);
             JoinRoom((string) roomArray[currentRoom]);
+			for (int i = 0; i < 6; ++i) {
+				playerImages[i].SetActive(i < roomPlayerNum);
+			}
         }
     }
 
@@ -868,6 +920,9 @@ public class GameManager : MonoBehaviour
         if (roomArray.Length > currentRoom + 1) {
             SetRoomInformation((string) roomArray[currentRoom + 1]);
             JoinRoom((string) roomArray[currentRoom + 1]);
+			for (int i = 0; i < 6; ++i) {
+				playerImages[i].SetActive(i < roomPlayerNum);
+			}
         }
     }
 
@@ -972,6 +1027,7 @@ public class GameManager : MonoBehaviour
 
     public bool IsHost()
     {
+		if (localMode) return true;
         return playerIDInRoom == 0;
     }
 
@@ -1034,32 +1090,25 @@ public class GameManager : MonoBehaviour
     {
         //roomPlayerNum = updatePlayerNumber;
 
-
-        if (roomPlayerNum < updatePlayerNumber) {
-            for (int i = roomPlayerNum; i < updatePlayerNumber; ++i) {
-                playerImages[i].SetActive(true);
-            }
-        } else {
-            for (int i = roomPlayerNum; i > updatePlayerNumber; --i) {
-                playerImages[i].SetActive(false);
-            }
-        }
-
         roomPlayerNum = updatePlayerNumber;
+
+		for (int i = 0; i < 6; ++i) {
+			playerImages[i].SetActive(i < roomPlayerNum);
+		}
     }
 
     public IEnumerator GameManagerReactOnAINetwork(string action)
-    {
-        aIactionQueue.Enqueue(action);
-        while (aIactionQueue.Count > 0) {
-            string aiAction = (string) aIactionQueue.Dequeue();
-            string[] actionParams = aiAction.Split(' ');
-            for (int i = 0; i < 10; i++)
-                board.possibleNum[i] = 0;
-            ((AIManager)players[currentPlayer]).ActionForAI();
-            board.currentHoodle = board.boardCells[int.Parse(actionParams[1]), int.Parse(actionParams[2])].hoodle;
-            yield return StartCoroutine(board.LetMoveAI(new Vector3(1, 2, 3), int.Parse(actionParams[3]), int.Parse(actionParams[4]), int.Parse(actionParams[5])));
-        }
+	{   
+		print("AI client reaction");
+		onAIAction = true;
+        string[] actionParams = action.Split(' ');
+        for (int i = 0; i < 10; i++)
+            board.possibleNum[i] = 0;
+        ((AIManager)players[currentPlayer]).ActionForAI();
+        board.currentHoodle = board.boardCells[int.Parse(actionParams[1]), int.Parse(actionParams[2])].hoodle;
+        yield return StartCoroutine(board.LetMoveAI(new Vector3(1, 2, 3), int.Parse(actionParams[3]), int.Parse(actionParams[4]), int.Parse(actionParams[5])));
+		onAIAction = false;
+		players[currentPlayer].finished = true;
     }
 
     

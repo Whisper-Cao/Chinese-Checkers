@@ -47,6 +47,10 @@ public class PlayerManager :PlayerAbstract
             }
         }
 
+		isJumping = false;
+		finished = false;
+		
+
         isTheFirstTry = true;
         theFirstHoodleCoordinateX = -1;
         theFirstHoodleCoordinateY = -1;
