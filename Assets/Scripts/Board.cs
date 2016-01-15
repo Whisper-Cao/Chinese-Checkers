@@ -1229,6 +1229,9 @@ public class Board : MonoBehaviour
                 --arrivalCounters[playerNum];
             currentHoodle.SetCoordinate(row, col);
             //send movements according to the bounce queue
+
+			print("LetMoveAI bounceQueue" + boardCells[row, col].bounceQueue.Count);
+
             if (gameManager.currentPlayer == 0) {
                 while (boardCells[row, col].bounceQueue.Count > 0) {
                     int[] nextPos = (int[]) boardCells[row, col].bounceQueue.Dequeue();
@@ -1246,6 +1249,7 @@ public class Board : MonoBehaviour
                     TimeModeUpdate(nextPos[0], nextPos[1]);
                 }
             }
+
 
             //TurnOffAllPoss();
             yield return StartCoroutine(currentHoodle.NotifyMove());
@@ -1314,6 +1318,9 @@ public class Board : MonoBehaviour
             }
 
         }
+
+
+
     }
 
     //check for valid destination cells for a move
@@ -1397,6 +1404,7 @@ public class Board : MonoBehaviour
                 boardCells[possibleCell[0], possibleCell[1]].lightManager.TurnOnHighLight();
             }
         }
+
     }
 
     public int ChooseAlgorithm()

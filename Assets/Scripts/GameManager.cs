@@ -512,7 +512,13 @@ public class GameManager : MonoBehaviour
 
     public void ChangePerspective()
     {
-        ((PlayerManager) players[currentPlayer]).ChangePerspective();
+		for (int i = 0; i < myPlayers.Length; ++i) {
+			if (myPlayers[i].cameras[0].GetComponent<Camera>() == currentCamera 
+			    || myPlayers[i].cameras[1].GetComponent<Camera>() == currentCamera) {
+				((PlayerManager) myPlayers[i]).ChangePerspective();
+				break;
+			}
+		}
     }
 
 
@@ -932,6 +938,8 @@ public class GameManager : MonoBehaviour
         this.portInfo = portInfo;
         this.playerIDInRoom = playerNum;
 
+		OnPlayerNumberChanges(playerNum + 1);
+
         /*if (playerIDInRoom != 1) {
             //GameModeChoiceDisable ();
             //EntryEnable (false);
@@ -1047,6 +1055,9 @@ public class GameManager : MonoBehaviour
 
     public string RoomInfomation()
     {
+		if (roomName == "") {
+			roomName = "Chinese Checkers";
+		}
         return "" + roomName + " " + timeInterval + " " + playerNum + " " + AINum + " "
             + timeMode + " " + obstacleMode + " " + flyMode + " " + hintMode + " " + maniaMode;
     }
@@ -1104,11 +1115,17 @@ public class GameManager : MonoBehaviour
         string[] actionParams = action.Split(' ');
         for (int i = 0; i < 10; i++)
             board.possibleNum[i] = 0;
-        ((AIManager)players[currentPlayer]).ActionForAI();
         board.currentHoodle = board.boardCells[int.Parse(actionParams[1]), int.Parse(actionParams[2])].hoodle;
-        yield return StartCoroutine(board.LetMoveAI(new Vector3(1, 2, 3), int.Parse(actionParams[3]), int.Parse(actionParams[4]), int.Parse(actionParams[5])));
-		onAIAction = false;
+		int desX = int.Parse(actionParams[3]), desY = int.Parse(actionParams[4]), label = int.Parse(actionParams[5]);
+
+		for (int i = 6; i < actionParams.Length; i += 2) {
+			board.boardCells[desX, desY].bounceQueueOfAI[label].Enqueue
+				(new int[2] {int.Parse(actionParams[i]), int.Parse(actionParams[i + 1])}); 
+		}
+        yield return StartCoroutine(board.LetMoveAI(new Vector3(1, 2, 3), desX, desY, label));
 		players[currentPlayer].finished = true;
+		onAIAction = false;
+		print("" + currentPlayer + " AI client reaction finished");
     }
 
     

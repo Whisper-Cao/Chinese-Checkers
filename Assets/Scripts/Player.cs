@@ -24,6 +24,25 @@ public class Player : MonoBehaviour {
 	void FixedUpdate ()
 	{
         try {
+			if (Application.isMobilePlatform) {
+				if (gameManager.currentCamera == gameManager.players[playerNumber].cameras[0].GetComponent<Camera>()
+				    || gameManager.currentCamera == gameManager.players[playerNumber].cameras[1].GetComponent<Camera>()) {
+					if (Input.touchCount > 0 && Input.GetTouch (0).phase == TouchPhase.Moved) {
+						Vector2 touchDeltaPosition = Input.GetTouch (0).deltaPosition;
+						Vector3 movement = new Vector3 (touchDeltaPosition.x * 0.2f, 0, touchDeltaPosition.y * 0.2f);
+						movement += rb.position;
+						if (movement.magnitude >= 8.0f) {
+							movement.Normalize ();
+							movement *= 8;
+						}
+						rb.position = movement;
+					}
+					
+					//rb.position = movement;
+					
+				}
+
+			} else 
             if (gameManager.currentCamera == gameManager.players[playerNumber].cameras[0].GetComponent<Camera>()
                 || gameManager.currentCamera == gameManager.players[playerNumber].cameras[1].GetComponent<Camera>()) {
                 float moveHorizontal = Input.GetAxis("Horizontal");
@@ -56,4 +75,7 @@ public class Player : MonoBehaviour {
 
         }
 	}
+
+
+
 }

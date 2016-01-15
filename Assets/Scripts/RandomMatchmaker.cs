@@ -11,6 +11,7 @@ public class RandomMatchmaker : Photon.PunBehaviour {
     public Text networkText;
 
 	private int playerNum;
+	private int maxPlayerNumber;
 	// Use this for initialization
 	void Start () {
 		//PhotonNetwork.logLevel = PhotonLogLevel.Full;
@@ -48,15 +49,19 @@ public class RandomMatchmaker : Photon.PunBehaviour {
 
 	public override void OnJoinedRoom ()
 	{
+		PhotonNetwork.room.maxPlayers = maxPlayerNumber;
 		playerNum = PhotonNetwork.playerList.Length;
 		port = PhotonNetwork.Instantiate ("port", Vector3.zero, Quaternion.identity, 0);
 		gameManager.SetPort (port, port.GetComponent<PortInfo> (), playerNum - 1);
 	}
-
+	
 	public void CreateRoom(string roomInformation) {
+		string[] information = roomInformation.Split (' ');
+		maxPlayerNumber = int.Parse (information [2]) - int.Parse (information [3]);
 		PhotonNetwork.CreateRoom(roomInformation);
 	}
-	
+
+
 	public void JoinRoom(string roomName) {
 		PhotonNetwork.JoinRoom(roomName);
 	}
@@ -68,8 +73,10 @@ public class RandomMatchmaker : Photon.PunBehaviour {
 		}
 	}
 
-    public void LeaveRoom()
-    {
-        PhotonNetwork.LeaveRoom();
-    }
+	public void LeaveRoom()
+	{
+		if(PhotonNetwork.playerList.Length == 1) 
+			PhotonNetwork.room.removedFromList = true;
+		PhotonNetwork.LeaveRoom();
+	}
 }
