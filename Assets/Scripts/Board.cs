@@ -17,7 +17,8 @@ public class Board : MonoBehaviour
     //6 move directions
     private int[][] walkDirections = new int[6][];
     //numbers of hoodles already in the opposite section
-    private int[] arrivalCounters = new int[6];
+	[HideInInspector]
+    public int[] arrivalCounters = new int[6];
     private GameObject[] lights;
 
     // public class hoodleAttributeOfAI{
@@ -370,22 +371,21 @@ public class Board : MonoBehaviour
                 SearchWalkDirection(hoodleCoord, walkDirections[i]);
             }
         } else {						// Needs to add the last pos to undo
-            boardCells[((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX,
-                       ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY].bounceQueue = new Queue();
-            boardCells[((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX,
-                       ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY].bounceQueue.Enqueue
+			int x = ((PlayerManager)gameManager.players [gameManager.currentPlayer]).theFirstHoodleCoordinateX,
+			y = ((PlayerManager)gameManager.players [gameManager.currentPlayer]).theFirstHoodleCoordinateY;
+			if (x != -1 && y != -1) {
+				boardCells [x, y].bounceQueue = new Queue ();
+				boardCells [x, y].bounceQueue.Enqueue
                 (
-                    new int[2] { ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX,
-                            ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY }
-                );
-            boardCells[((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX,
-                       ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY].isJumpDestination = false;
+					new int[2] { x, y }
+				);
+				boardCells [x, y].isJumpDestination = false;
 
-            arrivableList.Enqueue
+				arrivableList.Enqueue
                 (
-                    new int[2] { ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateX,
-                            ((PlayerManager) gameManager.players[gameManager.currentPlayer]).theFirstHoodleCoordinateY }
-                );
+					new int[2] { x, y }
+				);
+			}
 
         }
 
@@ -2038,6 +2038,36 @@ public class Board : MonoBehaviour
         desLevel[9][13] = 4;
     }
 
+	public void SyncPos(HoodleMove hoodleMove, int desX, int desY) {
+		int srcX = hoodleMove.onBoardCoord [0], srcY = hoodleMove.onBoardCoord [1];
+		boardCells [srcX, srcY].cellOccupied = false;
+		boardCells [desX, desY].cellOccupied = true;
+		boardCells [srcX, srcY].hoodle = null;
+		//hoodleMove.onBoardCoord [0] = desX;
+		//hoodleMove.onBoardCoord [1] = desY;
+		//hoodleMove.rigidBody.Sleep ();
+		//hoodleMove.rigidBody.WakeUp ();
+		//hoodleMove.SetPos(boardCells[desX, desY].cellPos);
+		Debug.Log ("set " + hoodleMove.owner + " " + "to " + desX + " " + desY + "********************************************");
+		//boardCells [desX, desY].hoodle = hoodleMove;
+		if (hoodleMove.owner == boardCells[desX, desY].destinationPlayer) {
+			++arrivalCounters[hoodleMove.owner];
+			if (arrivalCounters[hoodleMove.owner] == 10) {
+				gameManager.Win(gameManager.players[gameManager.currentPlayer].color);
+			}
+		}
 
+		if (hoodleMove.owner == boardCells[srcX, srcY].destinationPlayer)
+			--arrivalCounters[hoodleMove.owner];
+		hoodleMove.destPos.x = boardCells [desX, desY].cellPos.x;
+		hoodleMove.destPos.z = boardCells [desX, desY].cellPos.y;
+		hoodleMove.SetCoordinate(desX, desY);
+		hoodleMove.SetPos(boardCells[desX, desY].cellPos);
+		//boardCells[desX, desY].cellOccupied = true;
+		boardCells[desX, desY].hoodle = hoodleMove;
+		boardCells[desX, desY].hoodlePlayer = hoodleMove.owner;
+
+		Debug.Log ("Sync position");
+	}
 
 }

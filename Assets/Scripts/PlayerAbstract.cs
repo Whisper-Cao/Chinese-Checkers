@@ -7,7 +7,7 @@ public abstract class PlayerAbstract : MonoBehaviour
     public int playerNumber;
 
     protected GameObject[] hoodles;
-    protected HoodleMove[] hoodleMoves;
+    public HoodleMove[] hoodleMoves;
 
     public GameObject[] cameras;
     protected GameManager gameManager;

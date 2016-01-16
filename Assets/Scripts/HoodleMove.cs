@@ -8,7 +8,7 @@ public class HoodleMove : MonoBehaviour
     private Rigidbody rigidBody;
     private Transform hoodlePos;
     private int pendingCollision;//pendingCollision == 1, collision occurs and hasn't been dealt with
-    private Vector3 destPos;//the next position to jump to
+    public Vector3 destPos;//the next position to jump to
     private Board playBoard;
     private Component halo;//highlight of the hoodle
     public int[] onBoardCoord = new int[2];//the row and col number of hoodle on board
@@ -203,4 +203,7 @@ public class HoodleMove : MonoBehaviour
         pendingCollision = 0;
     }
 
+	public void JumpTo(int desX, int desY) {
+		
+	}
 }

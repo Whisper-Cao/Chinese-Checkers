@@ -60,7 +60,12 @@ public class PortInfo : Photon.MonoBehaviour {
                     StartCoroutine(ReactOnAINetwork(opCode));
 				} else if (opCode.StartsWith ("nextplayer")) {
 					print("" + gameManager.currentPlayer + " Here change");
-					gameManager.players[gameManager.currentPlayer].finished = true;
+					gameManager.nextPlayer ();
+					//gameManager.players[gameManager.currentPlayer].finished = true;
+					//gameManager.SyncPos(opCode);
+					//gameManager.players[gameManager.currentPlayer].finished = true;
+				} else if(opCode.StartsWith("syncpos")) {
+					gameManager.SyncPos(opCode);
 				}
 
 			}

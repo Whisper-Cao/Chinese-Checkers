@@ -10,8 +10,10 @@ public class GameManager : MonoBehaviour
     public int currentPlayer;//currentPlayer number, 6 for no player
     public float timer;
     private Board board;
+	private int lastPlayer;
     [HideInInspector]
     public Camera currentCamera;
+	private bool[] isMine;
 
     //display current player 
     private Text playerText;
@@ -83,12 +85,14 @@ public class GameManager : MonoBehaviour
     private int playerIDInRoom;
     private int chosenAIHoodle;
     public GameObject[] playerImages;
+	private bool lastIsMyTurn;
 
     private Queue aIactionQueue;
 
     void Start()
     {
         locker = true;
+		lastPlayer = 0;
         board = GameObject.FindGameObjectWithTag("HoldBoard").GetComponent<Board>();
         playerText = GameObject.FindGameObjectWithTag("PlayerTextTag").GetComponent<Text>();
         timeText = GameObject.FindGameObjectWithTag("TimeTextTag").GetComponent<Text>();
@@ -100,6 +104,8 @@ public class GameManager : MonoBehaviour
         cameraButton.GetComponentInChildren<Text>().enabled = false;
         board = GameObject.FindGameObjectWithTag("HoldBoard").GetComponent<Board>();
         networkManager = GameObject.FindGameObjectWithTag("NetworkManager").GetComponent<RandomMatchmaker>();
+
+		isMine = new bool[6];
 
         players = new PlayerAbstract[6];
         allPlayers[0].GetComponent<PlayerManager>().Link();
@@ -178,12 +184,26 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
+		if (lastPlayer != currentPlayer) {
+			if (IsHost () && players[lastPlayer].IsAI() || isMine[lastPlayer]) {
+				string syncpos = "syncpos " + lastPlayer;
+				for (int i = 0; i < 10; ++i) {
+					syncpos += " " + players [lastPlayer].hoodleMoves [i].onBoardCoord [0] + " "
+						+ players [lastPlayer].hoodleMoves [i].onBoardCoord [1];
+				}
+				Debug.Log ("Syncing pos " + syncpos);
+				SyncAction (syncpos);
+			}
+			lastPlayer = currentPlayer;
+		}
+
         if (currentPlayer != 6) { //if there's a current player
             if (!locker) {
-                timer -= Time.deltaTime;
+				if(timer > 0) 
+                	timer -= Time.deltaTime;
                 timeText.text = (Mathf.CeilToInt(timer)).ToString();
                 if (timer <= 0) {//if time out, next player
-                    locker = true;
+                    //locker = true;
                     //StartCoroutine(WaitForFinish());
                 }
             } else
@@ -200,7 +220,7 @@ public class GameManager : MonoBehaviour
         }
 
 		try {
-			if (IsHost() && players[currentPlayer].IsAI() || IsMyTurn()) {
+			if (IsHost() && players[currentPlayer].IsAI() || isMine[currentPlayer]) {
 				if (timer <= 0 && !isWaiting) {
 
 					StartCoroutine(WaitForJump());
@@ -209,7 +229,7 @@ public class GameManager : MonoBehaviour
 				} else if (players[currentPlayer].finished) {
 					players[currentPlayer].finished = false;
 					print("" + currentPlayer + " Finished nextPlayer " + System.DateTime.Now.Millisecond.ToString());
-					if (IsMyTurn()) {
+					if (isMine[currentPlayer]) {
 						SyncAction ("nextplayer");
 					}
 					nextPlayer();
@@ -347,7 +367,9 @@ public class GameManager : MonoBehaviour
         if (IsHost() && !localMode) {
             SyncAction("start");
         }
-
+		for (int i = 0; i < 6; ++i) {
+			isMine [i] = false;
+		}
 
         switch (playerNum) {
             case 2:
@@ -362,12 +384,12 @@ public class GameManager : MonoBehaviour
                 if (localMode) {
                     myPlayers = new PlayerManager[playerNum - AINum];
                 }
-
                 for (int i = 0; i < 2; ++i) {
                     if (i < playerNum - AINum) {
                         players[i * 3] = allPlayers[i * 3].GetComponent<PlayerManager>();
                         if (localMode) {
                             myPlayers[i] = (PlayerManager) players[i * 3];
+						isMine [i * 3] = true;
                         }
                     } else {
                         players[i * 3] = allPlayers[i * 3 + 6].GetComponent<AIManager>();
@@ -382,6 +404,7 @@ public class GameManager : MonoBehaviour
                 if (!localMode) {
                     myPlayers = new PlayerManager[1];
                     myPlayers[0] = (PlayerManager) players[playerIDInRoom * 3];
+				isMine [playerIDInRoom * 3] = true;
                 }
 
                 break;
@@ -395,6 +418,7 @@ public class GameManager : MonoBehaviour
                         players[i * 2] = allPlayers[i * 2].GetComponent<PlayerManager>();
                         if (localMode) {
                             myPlayers[i] = (PlayerManager) players[i *2];
+						isMine [i * 2] = true;
                         }
                     } else {
                         players[i * 2] = allPlayers[i * 2 + 6].GetComponent<AIManager>();
@@ -405,6 +429,7 @@ public class GameManager : MonoBehaviour
                 if (!localMode) {
                     myPlayers = new PlayerManager[1];
                     myPlayers[0] = (PlayerManager) players[playerIDInRoom * 2];
+				isMine [playerIDInRoom * 2] = true;
                 }
 
                 break;
@@ -418,6 +443,7 @@ public class GameManager : MonoBehaviour
                         players[i + (i + 1) / 3] = allPlayers[i + (i + 1) / 3].GetComponent<PlayerManager>();
                         if (localMode) {
                             myPlayers[i] = (PlayerManager) players[i + (i + 1) / 3];
+						isMine [i + (i + 1) / 3] = true;
                         }
                     } else {
                         players[i + (i + 1) / 3] = allPlayers[i + (i + 1) / 3 + 6].GetComponent<AIManager>();
@@ -428,6 +454,7 @@ public class GameManager : MonoBehaviour
                 if (!localMode) {
                     myPlayers = new PlayerManager[1];
                     myPlayers[0] = (PlayerManager) players[playerIDInRoom + (playerIDInRoom + 1) / 3];
+				isMine [playerIDInRoom + (playerIDInRoom + 1) / 3] = true;
                 }
 
                 break;
@@ -441,6 +468,7 @@ public class GameManager : MonoBehaviour
                         players[i] = allPlayers[i].GetComponent<PlayerManager>();
                         if (localMode) {
                             myPlayers[i] = (PlayerManager) players[i];
+						isMine [i] = true;
                         }
                     } else {
                         players[i] = allPlayers[i + 6].GetComponent<AIManager>();
@@ -451,6 +479,7 @@ public class GameManager : MonoBehaviour
                 if (!localMode) {
                     myPlayers = new PlayerManager[1];
                     myPlayers[0] = (PlayerManager) players[playerIDInRoom];
+				isMine [playerIDInRoom] = true;
                 }
 
                 break;
@@ -539,7 +568,7 @@ public class GameManager : MonoBehaviour
                 pickUp[i].GetComponent<PickUpRotate>().Reset();
                 pickUp[i].GetComponent<PickUpRotate>().time = time;
                 BoxCollider bc = pickUp[i].GetComponent<BoxCollider>();
-                bc.enabled = true;
+                bc.enabled = false;
                 return i * 30 + time;
             }
         }
@@ -1033,6 +1062,15 @@ public class GameManager : MonoBehaviour
         return false;
     }
 
+	private bool LastIsMyTurn() {
+		for (int i = 0; i < myPlayers.Length; ++i) {
+			if (myPlayers[i] == players[lastPlayer]) {
+				return true;
+			}
+		}
+		return false;
+	}
+
     public bool IsHost()
     {
 		if (localMode) return true;
@@ -1047,7 +1085,7 @@ public class GameManager : MonoBehaviour
             pickUp[i].GetComponent<PickUpRotate>().Reset();
             pickUp[i].GetComponent<PickUpRotate>().time = time;
             BoxCollider bc = pickUp[i].GetComponent<BoxCollider>();
-            bc.enabled = true;
+            bc.enabled = false;
             return i;
         }
         return -1;
@@ -1128,7 +1166,15 @@ public class GameManager : MonoBehaviour
 		print("" + currentPlayer + " AI client reaction finished");
     }
 
-    
-
-
+	public void SyncPos(string action) {
+		string[] actionParams = action.Split (' ');
+		int playerToSync = int.Parse (actionParams [1]);
+		for (int i = 0; i < 10; ++i) {
+			int x = int.Parse (actionParams [i * 2 + 2]), y = int.Parse (actionParams [i * 2 + 3]);
+			if (players [playerToSync].hoodleMoves [i].onBoardCoord [0] != x || 
+				players [playerToSync].hoodleMoves [i].onBoardCoord [1] != y) {
+				board.SyncPos (players [playerToSync].hoodleMoves [i], x, y);
+			}
+		}
+	}
 }
